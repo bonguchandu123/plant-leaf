@@ -12,7 +12,7 @@ backend/organic
 # Dataset and checkpoints
 dataset/
 *.csv
-
+*.keras
 *.png
 requirements.txt
 /train_model.py
