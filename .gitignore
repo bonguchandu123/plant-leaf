@@ -14,7 +14,9 @@ dataset/
 *.csv
 
 *.png
-
+requirements.txt
+/train_model.py
+models/class_names.txt
 # IDE files
 .vscode/
 .idea/
