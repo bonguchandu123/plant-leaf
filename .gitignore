@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+backend/__pycache__/
+backend/.env
+# Virtual environment
+venv/
+.env
+backend/organic
+# Dataset and checkpoints
+dataset/
+*.csv
+*.h5
+*.pkl
+*.keras
+*.png
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
