@@ -12,9 +12,7 @@ backend/organic
 # Dataset and checkpoints
 dataset/
 *.csv
-*.h5
-*.pkl
-*.keras
+
 *.png
 
 # IDE files
