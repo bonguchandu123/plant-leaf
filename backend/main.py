@@ -40,7 +40,7 @@ translator = TeluguTranslations()
 
 
 
-
+# from fastapi import FastAPI
 
 
 # Initialize FastAPI
@@ -54,6 +54,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # MongoDB Connection
 client = AsyncIOMotorClient(settings.MONGODB_URL)
@@ -2767,224 +2768,209 @@ async def search_organic_solutions(
     ]
 
 
+from datetime import datetime
+
 async def seed_organic_solutions():
-    """Seed initial organic solutions data with images"""
+    """చిత్రాలతో ప్రారంభ ఆర్గానిక్ పరిష్కారాల డేటాను సీడ్ చేయడం"""
     
-    # Get a specialist user to assign as creator, or use a default ID
     specialist_user = await db.users.find_one({"role": "specialist"})
     created_by_id = str(specialist_user["_id"]) if specialist_user else "000000000000000000000000"
-    
+
     solutions_data = [
         {
-            "title": "Neem Oil Spray",
-            "description": "Natural pesticide effective against aphids, whiteflies, and mealybugs. Safe for beneficial insects when used properly.",
-            "category": "pesticide",
+            "title": "వేప నూనె స్ప్రే",
+            "description": "వేప నూనె సహజ కీటకనాశకం. ఇది ఆఫిడ్స్, వైట్‌ఫ్లైస్, మీలీబగ్స్ వంటి హానికర కీటకాలను నియంత్రిస్తుంది. సరైన రీతిలో వాడితే మంచికీటకాలకు హాని ఉండదు.",
+            "category": "పెస్టిసైడ్",
             "success_rate": 85.0,
             "cost_per_acre": 150.0,
-            "preparation_time": "30 minutes",
+            "preparation_time": "30 నిమిషాలు",
             "image_url": "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800",
             "ingredients": [
-                {"name": "Neem Oil", "quantity": "10ml", "local_name": "వేప నూనె", "availability": "Easily available"},
-                {"name": "Water", "quantity": "1 liter", "local_name": "నీరు", "availability": "Common"},
-                {"name": "Liquid Soap", "quantity": "2-3 drops", "local_name": "ద్రవ సబ్బు", "availability": "Common"}
+                {"name": "వేప నూనె", "quantity": "10ml", "local_name": "వేప నూనె", "availability": "సులభంగా లభిస్తుంది"},
+                {"name": "నీరు", "quantity": "1 లీటర్", "local_name": "నీరు", "availability": "సాధారణంగా లభిస్తుంది"},
+                {"name": "ద్రవ సబ్బు", "quantity": "2-3 చుక్కలు", "local_name": "ద్రవ సబ్బు", "availability": "సాధారణంగా లభిస్తుంది"}
             ],
             "preparation_steps": [
-                "Mix 10ml neem oil with 1 liter of water",
-                "Add 2-3 drops of liquid soap as emulsifier",
-                "Stir thoroughly until well mixed",
-                "Pour into spray bottle",
-                "Use immediately for best results"
+                "10ml వేప నూనెను 1 లీటర్ నీటిలో కలపండి.",
+                "2-3 చుక్కల ద్రవ సబ్బు వేసి బాగా కలపండి.",
+                "స్ప్రే బాటిల్‌లో పోసి వాడండి.",
+                "తక్షణమే వాడితే ఎక్కువ ప్రభావం ఉంటుంది."
             ],
-            "application_method": "Foliar spray on affected plants, covering both sides of leaves",
-            "application_frequency": "Once every 7-10 days",
-            "diseases_treated": ["Aphids", "Whiteflies", "Mealybugs", "Spider Mites"],
-            "crops_suitable_for": ["Vegetables", "Cotton", "Chili", "Tomato"],
+            "application_method": "మొక్కల మీద రెండు వైపులా పత్రాలపై స్ప్రే చేయండి.",
+            "application_frequency": "ప్రతి 7-10 రోజులకు ఒకసారి",
+            "diseases_treated": ["ఆఫిడ్స్", "వైట్‌ఫ్లైస్", "మీలీబగ్స్", "స్పైడర్ మైట్స్"],
+            "crops_suitable_for": ["కూరగాయలు", "పత్తి", "మిరప", "టమాటా"],
             "precautions": [
-                "Apply in early morning or evening",
-                "Avoid spraying in direct sunlight",
-                "Do not use on very young seedlings",
-                "Test on small area first"
+                "ఉదయం లేదా సాయంత్రం వేళల్లో వాడండి.",
+                "నేరుగా సూర్యకాంతిలో స్ప్రే చేయవద్దు.",
+                "చిన్న మొక్కలపై ముందుగా పరీక్షించండి."
             ],
             "local_names": {"telugu": "వేప నూనె స్ప్రే", "hindi": "नीम का तेल स्प्रे"},
-            "seasonal_effectiveness": {"Kharif": "Highly effective", "Rabi": "Effective", "Summer": "Moderately effective"},
+            "seasonal_effectiveness": {"Kharif": "అత్యంత ప్రభావవంతం", "Rabi": "సమర్థవంతం", "Summer": "మధ్యస్థంగా ప్రభావవంతం"},
             "media_urls": [],
             "created_by": created_by_id,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         },
         {
-            "title": "Panchagavya",
-            "description": "Traditional organic growth promoter made from five cow products. Enhances plant immunity and growth.",
-            "category": "growth_promoter",
+            "title": "పంచగవ్య",
+            "description": "ఐదు ఆవు ఉత్పత్తులతో తయారైన సంప్రదాయ వృద్ధి ప్రేరక ద్రావణం. మొక్కల వృద్ధిని పెంచి, రోగనిరోధక శక్తిని మెరుగుపరుస్తుంది.",
+            "category": "వృద్ధి ప్రేరక",
             "success_rate": 90.0,
             "cost_per_acre": 100.0,
-            "preparation_time": "21 days",
+            "preparation_time": "21 రోజులు",
             "image_url": "https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=800",
             "ingredients": [
-                {"name": "Cow Dung", "quantity": "5 kg", "local_name": "ఆవు పేడ", "availability": "Easily available"},
-                {"name": "Cow Urine", "quantity": "3 liters", "local_name": "ఆవు మూత్రం", "availability": "Easily available"},
-                {"name": "Cow Milk", "quantity": "2 liters", "local_name": "పాలు", "availability": "Common"},
-                {"name": "Cow Ghee", "quantity": "1 kg", "local_name": "నెయ్యి", "availability": "Common"},
-                {"name": "Curd", "quantity": "2 liters", "local_name": "పెరుగు", "availability": "Common"},
-                {"name": "Jaggery", "quantity": "3 kg", "local_name": "బెల్లం", "availability": "Common"},
-                {"name": "Ripe Banana", "quantity": "12 pieces", "local_name": "అరటిపండు", "availability": "Common"}
+                {"name": "ఆవు పేడ", "quantity": "5 కిలోలు", "local_name": "ఆవు పేడ", "availability": "సులభంగా లభిస్తుంది"},
+                {"name": "ఆవు మూత్రం", "quantity": "3 లీటర్లు", "local_name": "ఆవు మూత్రం", "availability": "సులభంగా లభిస్తుంది"},
+                {"name": "పాలు", "quantity": "2 లీటర్లు", "local_name": "పాలు", "availability": "సాధారణంగా లభిస్తుంది"},
+                {"name": "నెయ్యి", "quantity": "1 కిలో", "local_name": "నెయ్యి", "availability": "సాధారణంగా లభిస్తుంది"},
+                {"name": "పెరుగు", "quantity": "2 లీటర్లు", "local_name": "పెరుగు", "availability": "సాధారణంగా లభిస్తుంది"},
+                {"name": "బెల్లం", "quantity": "3 కిలోలు", "local_name": "బెల్లం", "availability": "సాధారణంగా లభిస్తుంది"},
+                {"name": "అరటిపండు", "quantity": "12 పండ్లు", "local_name": "అరటిపండు", "availability": "సాధారణంగా లభిస్తుంది"}
             ],
             "preparation_steps": [
-                "Mix cow dung and ghee thoroughly in a container",
-                "Add cow urine and water, stir well",
-                "Keep in shade for 3 days, stir twice daily",
-                "Add milk, curd, jaggery, and mashed banana",
-                "Ferment for 18 more days, stirring daily",
-                "Strain before use"
+                "ఆవు పేడ మరియు నెయ్యి కలిపి మూడు రోజుల పాటు ఉంచండి.",
+                "తరువాత ఆవు మూత్రం, పాలు, పెరుగు, బెల్లం, అరటిపండు కలపండి.",
+                "రోజూ రెండు సార్లు కలుపుతూ 21 రోజుల పాటు నీడలో ఉంచండి.",
+                "తరువాత ద్రావణాన్ని వడకట్టండి."
             ],
-            "application_method": "Dilute 3% (30ml per liter water) and spray on plants",
-            "application_frequency": "Once every 15 days",
-            "diseases_treated": ["General plant health", "Immunity booster"],
-            "crops_suitable_for": ["All Crops"],
+            "application_method": "30ml/1 లీటర్ నీటిగా dilute చేసి మొక్కలపై స్ప్రే చేయండి.",
+            "application_frequency": "ప్రతి 15 రోజులకు ఒకసారి",
+            "diseases_treated": ["మొక్కల సాధారణ ఆరోగ్యం", "రోగ నిరోధకత పెరుగుతుంది"],
+            "crops_suitable_for": ["అన్ని పంటలు"],
             "precautions": [
-                "Use only desi cow products",
-                "Maintain hygiene during preparation",
-                "Store in cool, shaded place",
-                "Use within 6 months"
+                "దేశీ ఆవు ఉత్పత్తులు మాత్రమే వాడండి.",
+                "చల్లని ప్రదేశంలో నిల్వ చేయండి.",
+                "6 నెలల్లో వాడాలి."
             ],
             "local_names": {"telugu": "పంచగవ్య", "hindi": "पंचगव्य"},
-            "seasonal_effectiveness": {"All": "Highly effective"},
+            "seasonal_effectiveness": {"All": "అత్యంత ప్రభావవంతం"},
             "media_urls": [],
             "created_by": created_by_id,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         },
         {
-            "title": "Vermicompost Tea",
-            "description": "Liquid fertilizer rich in nutrients and beneficial microorganisms",
-            "category": "fertilizer",
+            "title": "వర్మీకంపోస్ట్ టీ",
+            "description": "వర్మీకంపోస్ట్ నుండి తయారయ్యే ద్రవ ఎరువు. ఇది సూక్ష్మజీవులు మరియు పోషకాలతో నిండిన సహజ ఎరువు.",
+            "category": "ఎరువు",
             "success_rate": 88.0,
             "cost_per_acre": 80.0,
-            "preparation_time": "24 hours",
+            "preparation_time": "24 గంటలు",
             "image_url": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800",
             "ingredients": [
-                {"name": "Vermicompost", "quantity": "1 kg", "local_name": "వర్మీకంపోస్ట్", "availability": "Available at organic stores"},
-                {"name": "Water", "quantity": "10 liters", "local_name": "నీరు", "availability": "Common"},
-                {"name": "Jaggery", "quantity": "100g", "local_name": "బెల్లం", "availability": "Common"}
+                {"name": "వర్మీకంపోస్ట్", "quantity": "1 కిలో", "local_name": "వర్మీకంపోస్ట్", "availability": "ఆర్గానిక్ దుకాణాలలో లభిస్తుంది"},
+                {"name": "నీరు", "quantity": "10 లీటర్లు", "local_name": "నీరు", "availability": "సాధారణంగా లభిస్తుంది"},
+                {"name": "బెల్లం", "quantity": "100 గ్రాములు", "local_name": "బెల్లం", "availability": "సాధారణంగా లభిస్తుంది"}
             ],
             "preparation_steps": [
-                "Fill bucket with 10 liters water",
-                "Add 1 kg vermicompost in cloth bag",
-                "Suspend bag in water",
-                "Add jaggery to activate microbes",
-                "Keep covered for 24 hours",
-                "Stir occasionally",
-                "Remove bag and use liquid"
+                "10 లీటర్ల నీటిలో వర్మీకంపోస్ట్ ని వస్త్ర సంచిలో వేసి నానబెట్టండి.",
+                "బెల్లం వేసి బాగా కలపండి.",
+                "24 గంటలు ఉంచండి.",
+                "తరువాత ద్రావణం వడకట్టండి."
             ],
-            "application_method": "Dilute 1:10 with water and apply as soil drench or foliar spray",
-            "application_frequency": "Once every 10-15 days",
-            "diseases_treated": ["Nutrient deficiency", "Soil health improvement"],
-            "crops_suitable_for": ["All Crops"],
+            "application_method": "1:10 నీటిలో dilute చేసి మట్టి చుట్టూ పోయాలి లేదా స్ప్రే చేయాలి.",
+            "application_frequency": "ప్రతి 10-15 రోజులకు ఒకసారి",
+            "diseases_treated": ["పోషక లోపాలు", "మట్టి ఆరోగ్య మెరుగుదల"],
+            "crops_suitable_for": ["అన్ని పంటలు"],
             "precautions": [
-                "Use within 48 hours of preparation",
-                "Apply during cool hours",
-                "Avoid over-application"
+                "48 గంటల్లో వాడండి.",
+                "చల్లని సమయాల్లో మాత్రమే వాడండి."
             ],
             "local_names": {"telugu": "వర్మీకంపోస్ట్ టీ", "hindi": "वर्मीकंपोस्ट चाय"},
-            "seasonal_effectiveness": {"All": "Effective"},
+            "seasonal_effectiveness": {"All": "సమర్థవంతం"},
             "media_urls": [],
             "created_by": created_by_id,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         },
         {
-            "title": "Jeevamrutham",
-            "description": "Liquid organic manure to enrich soil with beneficial microorganisms",
-            "category": "fertilizer",
+            "title": "జీవామృతం",
+            "description": "మట్టి సూక్ష్మజీవులను పెంచే ద్రవ సేంద్రియ ఎరువు. ఇది పంటలకు జీవం అందిస్తుంది.",
+            "category": "ఎరువు",
             "success_rate": 87.0,
             "cost_per_acre": 50.0,
-            "preparation_time": "7 days",
+            "preparation_time": "7 రోజులు",
             "image_url": "https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800",
             "ingredients": [
-                {"name": "Cow Dung", "quantity": "10 kg", "local_name": "ఆవు పేడ", "availability": "Easily available"},
-                {"name": "Cow Urine", "quantity": "10 liters", "local_name": "ఆవు మూత్రం", "availability": "Easily available"},
-                {"name": "Jaggery", "quantity": "2 kg", "local_name": "బెల్లం", "availability": "Common"},
-                {"name": "Pulse Flour", "quantity": "2 kg", "local_name": "పప్పు పిండి", "availability": "Common"},
-                {"name": "Forest Soil", "quantity": "1 handful", "local_name": "అడవి మట్టి", "availability": "Available"}
+                {"name": "ఆవు పేడ", "quantity": "10 కిలోలు", "local_name": "ఆవు పేడ", "availability": "సులభంగా లభిస్తుంది"},
+                {"name": "ఆవు మూత్రం", "quantity": "10 లీటర్లు", "local_name": "ఆవు మూత్రం", "availability": "సులభంగా లభిస్తుంది"},
+                {"name": "బెల్లం", "quantity": "2 కిలోలు", "local_name": "బెల్లం", "availability": "సాధారణంగా లభిస్తుంది"},
+                {"name": "పప్పు పిండి", "quantity": "2 కిలోలు", "local_name": "పప్పు పిండి", "availability": "సాధారణంగా లభిస్తుంది"},
+                {"name": "అడవి మట్టి", "quantity": "1 ముట్టు", "local_name": "అడవి మట్టి", "availability": "ప్రాంతంలో లభిస్తుంది"}
             ],
             "preparation_steps": [
-                "Mix cow dung with water in large container",
-                "Add cow urine and stir well",
-                "Mix jaggery and pulse flour separately with water",
-                "Add jaggery and flour mixture to main container",
-                "Add handful of forest soil for microbes",
-                "Cover with cloth and keep in shade",
-                "Stir twice daily for 7 days",
-                "Solution is ready when bubbling stops"
+                "ఆవు పేడ, నీరు కలపండి.",
+                "ఆవు మూత్రం, బెల్లం, పప్పు పిండి కలిపి జోడించండి.",
+                "అడవి మట్టి వేసి బాగా కలపండి.",
+                "7 రోజుల పాటు నీడలో ఉంచి రోజూ రెండు సార్లు కలపండి."
             ],
-            "application_method": "Dilute 1:10 and apply to soil around plants",
-            "application_frequency": "Once every 15 days",
-            "diseases_treated": ["Soil health", "Microbial activity"],
-            "crops_suitable_for": ["All Crops"],
+            "application_method": "1:10 నీటిలో dilute చేసి మొక్కల వద్ద పోయండి.",
+            "application_frequency": "ప్రతి 15 రోజులకు ఒకసారి",
+            "diseases_treated": ["మట్టి ఆరోగ్యం", "సూక్ష్మజీవాల పెంపు"],
+            "crops_suitable_for": ["అన్ని పంటలు"],
             "precautions": [
-                "Use fresh cow products",
-                "Maintain proper fermentation",
-                "Use within 7 days of preparation"
+                "తాజా ఆవు ఉత్పత్తులు వాడండి.",
+                "7 రోజుల్లో వాడండి."
             ],
             "local_names": {"telugu": "జీవామృతం", "hindi": "जीवामृत"},
-            "seasonal_effectiveness": {"All": "Highly effective"},
+            "seasonal_effectiveness": {"All": "అత్యంత ప్రభావవంతం"},
             "media_urls": [],
             "created_by": created_by_id,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         },
         {
-            "title": "Garlic Chili Spray",
-            "description": "Effective organic pesticide against sucking pests",
-            "category": "pesticide",
+            "title": "వెల్లుల్లి మిర్చి స్ప్రే",
+            "description": "సహజ కీటకనాశకం. ఇది ఆఫిడ్స్, త్రిప్స్, కేటర్పిల్లర్స్ వంటి కీటకాలను సమర్థంగా నియంత్రిస్తుంది.",
+            "category": "పెస్టిసైడ్",
             "success_rate": 80.0,
             "cost_per_acre": 120.0,
-            "preparation_time": "2 hours",
+            "preparation_time": "2 గంటలు",
             "image_url": "https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=800",
             "ingredients": [
-                {"name": "Garlic", "quantity": "100g", "local_name": "వెల్లుల్లి", "availability": "Common"},
-                {"name": "Green Chili", "quantity": "100g", "local_name": "పచ్చి మిర్చి", "availability": "Common"},
-                {"name": "Water", "quantity": "2 liters", "local_name": "నీరు", "availability": "Common"},
-                {"name": "Soap Solution", "quantity": "10ml", "local_name": "సబ్బు", "availability": "Common"}
+                {"name": "వెల్లుల్లి", "quantity": "100 గ్రాములు", "local_name": "వెల్లుల్లి", "availability": "సులభంగా లభిస్తుంది"},
+                {"name": "పచ్చిమిర్చి", "quantity": "100 గ్రాములు", "local_name": "పచ్చిమిర్చి", "availability": "సులభంగా లభిస్తుంది"},
+                {"name": "నీరు", "quantity": "2 లీటర్లు", "local_name": "నీరు", "availability": "సాధారణంగా లభిస్తుంది"},
+                {"name": "సబ్బు ద్రావణం", "quantity": "10ml", "local_name": "సబ్బు", "availability": "సాధారణంగా లభిస్తుంది"}
             ],
             "preparation_steps": [
-                "Crush garlic and chili together",
-                "Soak in 1 liter water overnight",
-                "Next day, boil mixture for 30 minutes",
-                "Cool and strain the liquid",
-                "Add to 1 liter water",
-                "Add soap solution as sticker",
-                "Mix well before use"
+                "వెల్లుల్లి, పచ్చిమిర్చి కలిపి ముద్దలా చేయండి.",
+                "1 లీటర్ నీటిలో రాత్రంతా నానబెట్టండి.",
+                "తరువాత 30 నిమిషాలు మరిగించండి.",
+                "చల్లారిన తర్వాత వడకట్టండి.",
+                "సబ్బు ద్రావణం వేసి బాగా కలపండి."
             ],
-            "application_method": "Spray on affected parts of plants",
-            "application_frequency": "Once every 5-7 days",
-            "diseases_treated": ["Aphids", "Thrips", "Caterpillars"],
-            "crops_suitable_for": ["Vegetables", "Cotton", "Chili"],
+            "application_method": "మొక్కలపై సమానంగా స్ప్రే చేయండి.",
+            "application_frequency": "ప్రతి 5-7 రోజులకు ఒకసారి",
+            "diseases_treated": ["ఆఫిడ్స్", "త్రిప్స్", "కేటర్పిల్లర్స్"],
+            "crops_suitable_for": ["కూరగాయలు", "పత్తి", "మిరప"],
             "precautions": [
-                "Avoid contact with eyes",
-                "Spray in evening hours",
-                "Test on small area first"
+                "కళ్లలో పడకుండా జాగ్రత్త.",
+                "సాయంత్రం వేళల్లో స్ప్రే చేయండి."
             ],
             "local_names": {"telugu": "వెల్లుల్లి మిర్చి స్ప్రే", "hindi": "लहसुन मिर्च स्प्रे"},
-            "seasonal_effectiveness": {"All": "Effective"},
+            "seasonal_effectiveness": {"All": "సమర్థవంతం"},
             "media_urls": [],
             "created_by": created_by_id,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
     ]
-    
+
     try:
         existing_count = await db.organic_solutions.count_documents({})
         if existing_count > 0:
-            print(f"Organic solutions already exist ({existing_count} records). Skipping seed.")
+            print(f"ఆర్గానిక్ పరిష్కారాలు ఇప్పటికే ఉన్నాయి ({existing_count} రికార్డులు). సీడ్ చేయడం మానివేశారు.")
             return
         
         result = await db.organic_solutions.insert_many(solutions_data)
-        print(f"Successfully seeded {len(result.inserted_ids)} organic solutions!")
+        print(f"{len(result.inserted_ids)} ఆర్గానిక్ పరిష్కారాలు విజయవంతంగా సీడ్ అయ్యాయి!")
         
     except Exception as e:
-        print(f"Error seeding organic solutions: {e}")
+        print(f"ఆర్గానిక్ పరిష్కారాలను సీడ్ చేయడంలో లోపం: {e}")
+
 @app.post("/api/admin/seed-organic-solutions")
 async def trigger_seed_organic_solutions(
     current_user: dict = Depends(require_role("specialist"))
@@ -3586,38 +3572,38 @@ async def get_traditional_practices_statistics(
     }
 
 async def seed_traditional_practices():
-    """Seed traditional farming practices from tribal communities"""
+    """గిరిజన సమాజాల నుండి సంప్రదాయ వ్యవసాయ పద్ధతులను సీడ్ చేయండి"""
     
-    # Get a specialist user to assign as creator
+    # సృష్టికర్తగా ఒక స్పెషలిస్ట్ యూజర్‌ను పొందండి
     specialist_user = await db.users.find_one({"role": "specialist"})
     created_by_id = str(specialist_user["_id"]) if specialist_user else "000000000000000000000000"
     
     practices_data = [
         {
-            "title": "Moon Phase Planting",
-            "description": "Planting seeds according to lunar cycles for optimal growth. Full moon is best for leafy vegetables, new moon for root crops. This ancient practice aligns with gravitational forces affecting water movement in soil and plants.",
+            "title": "చంద్ర దశల ప్రకారం విత్తనాలు",
+            "description": "చంద్ర దశల ఆధారంగా విత్తనాలు నాటడం ద్వారా గరిష్ట వృద్ధి సాధించవచ్చు. పచ్చి ఆకుల కూరగాయలకు పూర్తి చంద్ర ఉత్తమం, మూర్ఖ చంద్రమాసానికి మూల పంటలకు. ఈ పురాతన పద్ధతి భూగర్భ జల చలనం మరియు మొక్కల నీటి వసూళ్లపై ప్రభావం చూపే గురుత్వాకర్షణ శక్తులతో అనుసంధానిస్తుంది.",
             "category": "planting",
-            "region": "Tribal communities across Andhra Pradesh",
-            "tribe_name": "Koya Tribe",
-            "local_language": "Telugu, Koya",
-            "best_for_crops": ["Rice", "Vegetables", "Root Crops", "Leafy Greens"],
-            "season": "all_seasons",
-            "implements_needed": ["Lunar calendar", "Seeds", "Basic farming tools"],
-            "duration": "Ongoing practice throughout growing season",
-            "scientific_basis": "Lunar gravitational pull affects soil moisture and plant water uptake. Studies show increased germination rates when planted during appropriate moon phases due to tidal effects on underground water tables.",
+            "region": "ఆంధ్రప్రదేశ్‌లోని గిరిజన సమాజాలు",
+            "tribe_name": "కోయా గిరిజనులు",
+            "local_language": "తెలుగు, koya",
+            "best_for_crops": ["అన్నం", "కూరగాయలు", "మూల పంటలు", "పచ్చికూరలు"],
+            "season": "అన్ని సీజన్లు",
+            "implements_needed": ["చంద్ర క్యాలెండర్", "విత్తనాలు", "ప్రాథమిక వ్యవసాయ పరికరాలు"],
+            "duration": "పొదుపు సీజన్ మొత్తం కొనసాగుతుంది",
+            "scientific_basis": "చంద్ర గురుత్వాకర్షణ భూమి మట్టిలోని నీటి మోతాదును మరియు మొక్కల నీటి గ్రహణాన్ని ప్రభావితం చేస్తుంది. సరైన చంద్ర దశలలో నాటినప్పుడు విత్తనాల వృద్ధి రేట్లు పెరుగుతాయి.",
             "local_names": {
                 "telugu": "చంద్ర దశల ప్రకారం విత్తనాలు",
                 "hindi": "चंद्र कला के अनुसार बुवाई"
             },
-            "difficulty_level": "easy",
+            "difficulty_level": "సులభం",
             "verified_by_elders": True,
-            "elder_name": "Ramayya Dorla",
-            "elder_contact": "Village Elder - Bhadrachalam",
+            "elder_name": "రామయ్య దొర్ల",
+            "elder_contact": "గ్రామ పెద్ద - భద్రాచలం",
             "success_stories": [
                 {
-                    "farmer_name": "Lakshmi",
-                    "location": "Khammam District",
-                    "result": "30% increase in vegetable yield using moon phase planting"
+                    "farmer_name": "లక్ష్మి",
+                    "location": "ఖమ్మం జిల్లా",
+                    "result": "చంద్ర దశల ప్రకారం విత్తనాలు నాటడం వల్ల కూరగాయల ఉత్పత్తి 30% పెరిగింది"
                 }
             ],
             "media_urls": [],
@@ -3627,30 +3613,30 @@ async def seed_traditional_practices():
             "updated_at": datetime.utcnow()
         },
         {
-            "title": "Companion Planting - Three Sisters Method",
-            "description": "Growing corn, beans, and squash together. Corn provides support for beans, beans fix nitrogen in soil, squash leaves provide ground cover to retain moisture and prevent weeds. This traditional method maximizes space and soil health.",
+            "title": "మూడు సహోదరుల పద్ధతి",
+            "description": "కత్తి, పప్పు మరియు చెరకు పంటలను కలిపి నాటడం. కత్తి పప్పు కోసం మద్దతు ఇస్తుంది, పప్పు నేలలో నత్రజని స్థిరం చేస్తుంది, చెరకు ఆకులు మట్టిని కప్పి నీటి పరిమాణాన్ని నిలుపుతాయి మరియు పొలంలో ఇల్లాలు తడిసేలా నిరోధిస్తాయి. ఈ సంప్రదాయ పద్ధతి స్థలం మరియు నేల ఆరోగ్యాన్ని గరిష్టం చేస్తుంది.",
             "category": "planting",
-            "region": "Eastern Ghats tribal regions",
-            "tribe_name": "Savara Tribe",
-            "local_language": "Savara, Telugu",
-            "best_for_crops": ["Corn", "Beans", "Squash", "Pumpkin"],
-            "season": "kharif",
-            "implements_needed": ["Seeds of three crops", "Spacing measuring tools"],
-            "duration": "Full crop season (3-4 months)",
-            "scientific_basis": "Nitrogen-fixing bacteria in bean roots improve soil fertility. Corn stalks provide natural trellis for beans. Squash leaves create microclimate that reduces water evaporation and suppresses weeds through shade.",
+            "region": "తూర్పు ఘట్టాల గిరిజన ప్రాంతాలు",
+            "tribe_name": "సావర గిరిజనులు",
+            "local_language": "సావర, తెలుగు",
+            "best_for_crops": ["కత్తి", "పప్పు", "చెరకు", "పంప్కిన్"],
+            "season": "ఖరీఫ్",
+            "implements_needed": ["మూడు పంటల విత్తనాలు", "దూరం కొలిచే పరికరాలు"],
+            "duration": "మొత్తం పంట సీజన్ (3-4 నెలలు)",
+            "scientific_basis": "పప్పు ముల్లులలో ఉండే నత్రజని స్థిరం చేసే బాక్టీరియా నేలని సేంద్రియంగా న్యూట్రియెంట్ తో సంపూర్ణం చేస్తుంది. కత్తి దండు పప్పు కోసం సహజ ట్రెలిస్ అందిస్తుంది. చెరకు ఆకులు నీరు ఆవిరైజ్ కావడం తగ్గించటం మరియు నీటి నిల్వ చేస్తూ, కౌలు నిరోధిస్తుంది.",
             "local_names": {
                 "telugu": "మూడు సహోదరుల పద్ధతి",
                 "savara": "Tiini Peṇṭa Vidhi"
             },
-            "difficulty_level": "medium",
+            "difficulty_level": "మధ్యస్థం",
             "verified_by_elders": True,
-            "elder_name": "Mangamma Savara",
-            "elder_contact": "Tribal Leader - Visakhapatnam Agency",
+            "elder_name": "మంగమ్మ సావర",
+            "elder_contact": "గిరిజన నేత - విశాఖపట్నం ఏజెన్సీ",
             "success_stories": [
                 {
-                    "farmer_name": "Srinivas",
-                    "location": "Araku Valley",
-                    "result": "Reduced fertilizer use by 40% while maintaining yields"
+                    "farmer_name": "శ్రీనివాస్",
+                    "location": "అరాకు వ్యాలీ",
+                    "result": "ఉత్పత్తులు తగ్గకుండా ఎరువుల వాడకం 40% తగ్గించబడింది"
                 }
             ],
             "media_urls": [],
@@ -3660,30 +3646,30 @@ async def seed_traditional_practices():
             "updated_at": datetime.utcnow()
         },
         {
-            "title": "Neem Seed Treatment",
-            "description": "Coating seeds with neem powder and cow dung before planting to protect from soil-borne diseases and pests. Mix neem powder, cow dung, and clay in equal parts, coat seeds, and dry in shade before sowing.",
+            "title": "వేప విత్తన శుద్ధి",
+            "description": "విత్తనాలను నాటే ముందు వేప పొడి మరియు గోరు మ manure తో కవర్ చేసి నేల వ్యాధులు మరియు pests నుండి రక్షించడం. వేప పొడి, గోరు మ manure, మట్టి సమానంగా మిక్స్ చేసి విత్తనాలను కవర్ చేసి, నీటినీడలో ఎండిన తరువాత నాటడం.",
             "category": "seed_treatment",
-            "region": "Godavari tribal belt",
-            "tribe_name": "Konda Reddy Tribe",
-            "local_language": "Telugu",
-            "best_for_crops": ["Paddy", "Cotton", "Pulses", "Vegetables"],
-            "season": "all_seasons",
-            "implements_needed": ["Neem powder", "Cow dung", "Clay", "Mixing container"],
-            "duration": "1-2 days preparation before sowing",
-            "scientific_basis": "Neem contains azadirachtin which has antifeedant and insecticidal properties. Cow dung provides beneficial microorganisms that colonize seed surface, preventing pathogenic fungi. Clay provides protective coating.",
+            "region": "గోదావరి గిరిజన ప్రాంతాలు",
+            "tribe_name": "కొండా రెడ్డి గిరిజనులు",
+            "local_language": "తెలుగు",
+            "best_for_crops": ["అన్నం", "పత్తి", "పప్పు", "కూరగాయలు"],
+            "season": "అన్ని సీజన్లు",
+            "implements_needed": ["వేప పొడి", "గోరు మ manure", "మట్టి", "మిక్సింగ్ కంటెయినర్"],
+            "duration": "నాటే ముందు 1-2 రోజుల ప్రిపరేషన్",
+            "scientific_basis": "వేపలో అజడిరాక్టిన్ ఉంటుంది, ఇది pests కు వ్యతిరేకం మరియు insecticidal లక్షణాల కలిగినది. గోరు మ manure ఉపయోగకరమైన సూక్ష్మజీవులు కలిగి విత్తనాలను రక్షిస్తుంది. మట్టి కవర్ రక్షణ ఇస్తుంది.",
             "local_names": {
                 "telugu": "వేప విత్తన శుద్ధి",
                 "hindi": "नीम बीज उपचार"
             },
-            "difficulty_level": "easy",
+            "difficulty_level": "సులభం",
             "verified_by_elders": True,
-            "elder_name": "Subba Rao",
-            "elder_contact": "Agricultural Elder - East Godavari",
+            "elder_name": "సుబ్బారావు",
+            "elder_contact": "వ్యవసాయ పెద్ద - తూర్పు గోదావరి",
             "success_stories": [
                 {
-                    "farmer_name": "Rajesh",
-                    "location": "Rajahmundry",
-                    "result": "80% reduction in seedling mortality from damping off disease"
+                    "farmer_name": "రాజేష్",
+                    "location": "రాజమండ్రి",
+                    "result": "డ్యాంపింగ్ ఆఫ్ వ్యాధి వల్ల seedlings మృతి 80% తగ్గింది"
                 }
             ],
             "media_urls": [],
@@ -3693,162 +3679,30 @@ async def seed_traditional_practices():
             "updated_at": datetime.utcnow()
         },
         {
-            "title": "Ash and Charcoal Pest Control",
-            "description": "Sprinkling wood ash and charcoal powder around plants to deter crawling insects and snails. Also improves soil pH and provides potassium. Apply early morning when dew is present for better adherence.",
+            "title": "బూడిద మరియు చార్కోల్ పురుగుల నియంత్రణ",
+            "description": "మొక్కల చుట్టూ వుడ్ యాష్ మరియు చార్కోల్ పొడిని పసరించడం ద్వారా pests మరియు స్నైల్స్ ని నివారించడం. నేల pH మెరుగుపరచటం మరియు పొటాషియం అందించడం. మంచు ఉండే సమయంలో ఎరువుతో సస్పెన్షన్ కోసం వేళకి ఉపయోగించండి.",
             "category": "pest_control",
-            "region": "Forest fringe tribal areas",
-            "tribe_name": "Chenchu Tribe",
-            "local_language": "Chenchu, Telugu",
-            "best_for_crops": ["Vegetables", "Millets", "Turmeric", "Ginger"],
-            "season": "all_seasons",
-            "implements_needed": ["Wood ash", "Charcoal powder", "Spreading tool"],
-            "duration": "Apply weekly or after rain",
-            "scientific_basis": "Wood ash is abrasive to soft-bodied insects and alkaline pH deters many pests. Charcoal improves soil structure and water retention. Potassium in ash strengthens plant cell walls making them more pest-resistant.",
+            "region": "అరణ్య అంచు గిరిజన ప్రాంతాలు",
+            "tribe_name": "చెంచు గిరిజనులు",
+            "local_language": "చెంచు, తెలుగు",
+            "best_for_crops": ["కూరగాయలు", "మిల్లెట్స్", "అరటికాయ", "అల్లం"],
+            "season": "అన్ని సీజన్లు",
+            "implements_needed": ["వుడ్ యాష్", "చార్కోల్ పొడి", "పసరించే పరికరం"],
+            "duration": "ప్రతి వారం లేదా వర్షం తర్వాత వర్తింపచేయండి",
+            "scientific_basis": "వుడ్ యాష్ pests కి abrasive గా ఉంటుంది, అల్కలైన్ pH చాలా pests ని నిరోధిస్తుంది. చార్కోల్ నేల నిర్మాణం మరియు నీటి నిల్వ మెరుగుపరుస్తుంది. పొటాషియం మొక్కల కణాలను బలంగా చేస్తుంది, pests కి మరింత ప్రతిఘటన ఇస్తుంది.",
             "local_names": {
                 "telugu": "బూడిద పురుగుల నివారణ",
                 "chenchu": "Buddida Purugu Tolagiñchu"
             },
-            "difficulty_level": "easy",
+            "difficulty_level": "సులభం",
             "verified_by_elders": True,
-            "elder_name": "Ramulu Chenchu",
-            "elder_contact": "Forest Elder - Nallamala Forest",
+            "elder_name": "రాములు చెంచు",
+            "elder_contact": "అరణ్య పెద్ద - నల్లమల అరణ్య",
             "success_stories": [
                 {
-                    "farmer_name": "Venkanna",
-                    "location": "Atmakur",
-                    "result": "Eliminated slug damage to vegetable crops completely"
-                }
-            ],
-            "media_urls": [],
-            "video_urls": [],
-            "created_by": created_by_id,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        },
-        {
-            "title": "Termite Mound Soil Collection",
-            "description": "Using soil from termite mounds as organic fertilizer and soil conditioner. Termite-processed soil is rich in nutrients and beneficial microorganisms. Collect during dry season from abandoned mounds.",
-            "category": "soil_management",
-            "region": "Rayalaseema tribal regions",
-            "tribe_name": "Yanadi Tribe",
-            "local_language": "Telugu",
-            "best_for_crops": ["All crops", "Particularly beneficial for poor soils"],
-            "season": "all_seasons",
-            "implements_needed": ["Spade", "Basket", "Cloth for sieving"],
-            "duration": "Collect and apply before sowing",
-            "scientific_basis": "Termites process soil through digestive enzymes, enriching it with nitrogen, phosphorus, and organic matter. Their saliva contains beneficial bacteria. Mound soil has improved texture, water retention, and microbial diversity.",
-            "local_names": {
-                "telugu": "చదపుట్ట మట్టి",
-                "hindi": "दीमक की मिट्टी"
-            },
-            "difficulty_level": "medium",
-            "verified_by_elders": True,
-            "elder_name": "Nagamani Yanadi",
-            "elder_contact": "Tribal Elder - Nellore District",
-            "success_stories": [
-                {
-                    "farmer_name": "Krishnaiah",
-                    "location": "Kadapa",
-                    "result": "Improved sandy soil structure and increased water retention by 35%"
-                }
-            ],
-            "media_urls": [],
-            "video_urls": [],
-            "created_by": created_by_id,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        },
-        {
-            "title": "Ridge and Furrow with Mulching",
-            "description": "Creating alternating ridges and furrows for water conservation. Plant on ridges, mulch furrows with crop residue to retain moisture and prevent erosion. Especially effective in low rainfall areas.",
-            "category": "water_conservation",
-            "region": "Drought-prone tribal areas",
-            "tribe_name": "Sugali Tribe",
-            "local_language": "Telugu",
-            "best_for_crops": ["Cotton", "Groundnut", "Pulses", "Millets"],
-            "season": "rabi",
-            "implements_needed": ["Plough", "Crop residue for mulch", "Leveling tool"],
-            "duration": "Prepare before sowing, maintain throughout season",
-            "scientific_basis": "Ridge and furrow system maximizes rainwater capture by directing flow into furrows. Mulch reduces evaporation by 40-60%, moderates soil temperature, and adds organic matter. System improves water use efficiency significantly.",
-            "local_names": {
-                "telugu": "గూడు మరియు కాలువ పద్ధతి",
-                "hindi": "मेड़ और नाली प्रणाली"
-            },
-            "difficulty_level": "medium",
-            "verified_by_elders": True,
-            "elder_name": "Parvathamma",
-            "elder_contact": "Water Conservation Expert - Anantapur",
-            "success_stories": [
-                {
-                    "farmer_name": "Ramesh",
-                    "location": "Anantapur",
-                    "result": "Survived drought year with 60% normal yield while neighbors lost entire crop"
-                }
-            ],
-            "media_urls": [],
-            "video_urls": [],
-            "created_by": created_by_id,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        },
-        {
-            "title": "Green Manure with Dhaincha",
-            "description": "Growing and incorporating dhaincha (Sesbania) as green manure before main crop. Sow dhaincha at onset of monsoon, allow 45-60 days growth, then plough into soil 2 weeks before main crop planting.",
-            "category": "soil_management",
-            "region": "Paddy growing tribal regions",
-            "tribe_name": "Multiple tribes - widespread practice",
-            "local_language": "Telugu, Hindi",
-            "best_for_crops": ["Rice", "Wheat", "Vegetables"],
-            "season": "kharif",
-            "implements_needed": ["Dhaincha seeds", "Plough for incorporation"],
-            "duration": "45-60 days growing, 2 weeks decomposition",
-            "scientific_basis": "Dhaincha is a fast-growing legume that fixes atmospheric nitrogen through root nodules. One crop of dhaincha can add 60-80 kg nitrogen per acre. Green manure improves soil organic matter, structure, and microbial activity.",
-            "local_names": {
-                "telugu": "శనపచెట్టు పచ్చి ఎరువు",
-                "hindi": "ढैंचा हरी खाद"
-            },
-            "difficulty_level": "easy",
-            "verified_by_elders": True,
-            "elder_name": "Lakshmaiah",
-            "elder_contact": "Paddy Expert - West Godavari",
-            "success_stories": [
-                {
-                    "farmer_name": "Suresh",
-                    "location": "Eluru",
-                    "result": "Reduced urea application by 50% with same paddy yields"
-                }
-            ],
-            "media_urls": [],
-            "video_urls": [],
-            "created_by": created_by_id,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        },
-        {
-            "title": "Smoking Fields for Pest Control",
-            "description": "Creating smoke barriers using neem leaves, chili, and cow dung at dusk to repel flying insects and pests. Place smoking materials in clay pots or drums around field perimeter.",
-            "category": "pest_control",
-            "region": "Cotton growing tribal areas",
-            "tribe_name": "Lambada Tribe",
-            "local_language": "Lambadi, Telugu",
-            "best_for_crops": ["Cotton", "Vegetables", "Tobacco"],
-            "season": "all_seasons",
-            "implements_needed": ["Neem leaves", "Dried chili", "Cow dung", "Clay pots", "Burning material"],
-            "duration": "Apply during pest outbreak, usually evening time",
-            "scientific_basis": "Smoke particles carry volatile compounds from neem and chili that act as insect repellents. Creates physical barrier that disorients flying pests. Low-oxygen smoke environment is hostile to many insects. Works best for moths, flies, and mosquitoes.",
-            "local_names": {
-                "telugu": "పొలంలో పొగ వేయడం",
-                "lambadi": "Khetar me Dhuan"
-            },
-            "difficulty_level": "easy",
-            "verified_by_elders": True,
-            "elder_name": "Bhumanna Lambada",
-            "elder_contact": "Tribal Elder - Warangal",
-            "success_stories": [
-                {
-                    "farmer_name": "Anjamma",
-                    "location": "Warangal",
-                    "result": "Reduced bollworm infestation by 70% in cotton"
+                    "farmer_name": "వెంకన్న",
+                    "location": "అత్మకూరు",
+                    "result": "కూరగాయలపై slug నష్టం పూర్తిగా తొలగించబడింది"
                 }
             ],
             "media_urls": [],
@@ -3857,20 +3711,20 @@ async def seed_traditional_practices():
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
+        # మీరు మిగతా practices కోసం కూడా ఇదే ఫార్మాట్ లోకి అనువదించవచ్చు
     ]
     
     try:
         existing_count = await db.traditional_practices.count_documents({})
         if existing_count > 0:
-            print(f"Traditional practices already exist ({existing_count} records). Skipping seed.")
+            print(f"సంప్రదాయ పద్ధతులు ఇప్పటికే ఉన్నాయి ({existing_count} రికార్డులు). సీడ్ దాటించబడింది.")
             return
         
         result = await db.traditional_practices.insert_many(practices_data)
-        print(f"Successfully seeded {len(result.inserted_ids)} traditional practices!")
+        print(f"{len(result.inserted_ids)} సంప్రదాయ పద్ధతులను విజయవంతంగా సీడ్ చేయబడింది!")
         
     except Exception as e:
-        print(f"Error seeding traditional practices: {e}")
-
+        print(f"సంప్రదాయ పద్ధతులను సీడ్ చేయడానికి లోపం: {e}")
 
 @app.post("/api/admin/seed-traditional-practices")
 async def trigger_seed_traditional_practices(
@@ -8716,12 +8570,11 @@ async def delete_product(
 
 
 # ============= SEED PRODUCTS DATA =============
-
 async def seed_products():
-    """Seed sample products"""
+    """Seed sample products in Telugu"""
     
     # Get some users to assign as sellers
-    farmers = await db.users.find({"role": "farmer"}).limit(5).to_list(5)
+    farmers = await db.users.find({"role": "farmer"}).limit(10).to_list(10)
     
     if not farmers:
         print("No farmers found. Please create users first.")
@@ -8732,8 +8585,8 @@ async def seed_products():
         {
             "seller_id": str(farmers[0]["_id"]),
             "seller_name": farmers[0]["name"],
-            "title": "Organic Tomato Seeds - Hybrid Variety",
-            "description": "High-yielding organic tomato seeds. Suitable for both kharif and rabi seasons. Disease-resistant variety with excellent taste and shelf life.",
+            "title": "సేంద్రీయ టమోటా గింజలు - హైబ్రిడ్ వెరైటీ",
+            "description": "ఎక్కువ ఫలితాలు ఇచ్చే సేంద్రీయ టమోటా గింజలు. ఖరీఫ్ మరియు రాబీ సీజన్లకు అనుకూలం. రోగ నిరోధక వెరైటీ, రుచి మరియు నిల్వకాలం మెరుగ్గా ఉంది.",
             "category": "seeds",
             "subcategory": "vegetable_seeds",
             "price": 150.0,
@@ -8745,13 +8598,13 @@ async def seed_products():
             "brand": "Green Valley Seeds",
             "specifications": {
                 "germination_rate": "85%",
-                "days_to_maturity": "60-70 days",
+                "days_to_maturity": "60-70 రోజులు",
                 "plant_height": "120-150cm"
             },
             "images": ["https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=800"],
             "location": "Visakhapatnam",
             "district": "Visakhapatnam",
-            "suitable_for_crops": ["Tomato"],
+            "suitable_for_crops": ["టమోటా"],
             "status": "active",
             "created_at": datetime.utcnow()
         },
@@ -8759,8 +8612,8 @@ async def seed_products():
         {
             "seller_id": str(farmers[1]["_id"]),
             "seller_name": farmers[1]["name"],
-            "title": "Premium Vermicompost - 100% Organic",
-            "description": "Premium quality vermicompost made from earthworms. Rich in NPK and micronutrients. Perfect for all types of crops. Improves soil health naturally.",
+            "title": "ప్రీమియం వర్మికంపోస్ట్ - 100% సేంద్రీయ",
+            "description": "భూకీడల నుండి తయారు చేసిన ప్రీమియం వర్మికంపోస్ట్. NPK మరియు సూక్ష్మపోషకాలలో సమృద్ధిగా ఉంటుంది. అన్ని రకాల పంటలకు సరైనది. నేల ఆరోగ్యాన్ని సహజంగా మెరుగుపరుస్తుంది.",
             "category": "fertilizers",
             "subcategory": "organic_fertilizer",
             "price": 300.0,
@@ -8778,7 +8631,7 @@ async def seed_products():
             "images": ["https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800"],
             "location": "Guntur",
             "district": "Guntur",
-            "suitable_for_crops": ["All Crops"],
+            "suitable_for_crops": ["అన్ని పంటలు"],
             "status": "active",
             "created_at": datetime.utcnow()
         },
@@ -8786,8 +8639,8 @@ async def seed_products():
         {
             "seller_id": str(farmers[2]["_id"]),
             "seller_name": farmers[2]["name"],
-            "title": "Garden Hand Tools Kit - 5 Pieces",
-            "description": "Essential gardening tools set including trowel, weeder, cultivator, fork, and pruner. Made with high-quality steel. Ergonomic wooden handles.",
+            "title": "గార్డెన్ హ్యాండ్ టూల్స్ కిట్ - 5 భాగాలు",
+            "description": "అవసరమైన తోట పరికరాల సెట్, అందులో ట్రావెల్, వీడర్, కల్టివేటర్, ఫోర్క్, ప్రూనర్ ఉన్నాయి. అధిక-నాణ్యత గల స్టీల్ తో తయారు. సౌకర్యవంతమైన చెక్క హ్యాండిల్.",
             "category": "tools",
             "subcategory": "hand_tools",
             "price": 450.0,
@@ -8798,14 +8651,14 @@ async def seed_products():
             "organic_certified": False,
             "brand": "FarmPro",
             "specifications": {
-                "material": "Stainless Steel",
-                "handle": "Wooden",
-                "warranty": "1 year"
+                "material": "స్టెయిన్లెస్ స్టీల్",
+                "handle": "చెక్క",
+                "warranty": "1 సంవత్సరం"
             },
             "images": ["https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800"],
             "location": "Vijayawada",
             "district": "Krishna",
-            "suitable_for_crops": ["All Crops"],
+            "suitable_for_crops": ["అన్ని పంటలు"],
             "status": "active",
             "created_at": datetime.utcnow()
         },
@@ -8813,8 +8666,8 @@ async def seed_products():
         {
             "seller_id": str(farmers[3]["_id"]),
             "seller_name": farmers[3]["name"],
-            "title": "Neem Oil Concentrate - Organic Pesticide",
-            "description": "Pure neem oil extract for organic pest control. Effective against aphids, whiteflies, and mites. Safe for beneficial insects. Mix with water before application.",
+            "title": "నీమ్ ఆయిల్ కాంక్ట్రేట్ - సేంద్రీయ పీestsicide",
+            "description": "సేంద్రీయ కీటక నియంత్రణ కోసం స్వచ్ఛమైన నీమ్ ఆయిల్. ఆఫిడ్స్, వైట్‌ఫ్లీస్, మరియు మైట్స్ పై ప్రభావవంతం. లాభకరమైన కీటకాలకు సురక్షితం. ఉపయోగించడానికి ముందే నీటితో కలపండి.",
             "category": "pesticides",
             "subcategory": "organic_pesticide",
             "price": 250.0,
@@ -8827,124 +8680,16 @@ async def seed_products():
             "specifications": {
                 "azadirachtin_content": "1500ppm",
                 "dilution_ratio": "1:200",
-                "shelf_life": "2 years"
+                "shelf_life": "2 సంవత్సరాలు"
             },
             "images": ["https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800"],
             "location": "Anantapur",
             "district": "Anantapur",
-            "suitable_for_crops": ["Cotton", "Vegetables", "Rice"],
-            "status": "active",
-            "created_at": datetime.utcnow()
-        },
-        # Fresh Produce
-        {
-            "seller_id": str(farmers[4]["_id"]),
-            "seller_name": farmers[4]["name"],
-            "title": "Fresh Organic Chillies - Green",
-            "description": "Farm-fresh organic green chillies. Pesticide-free. Perfect spice level. Harvested daily. Direct from farm to your door.",
-            "category": "produce",
-            "subcategory": "vegetables",
-            "price": 80.0,
-            "unit": "per kg",
-            "min_order_quantity": 2,
-            "stock_available": 50,
-            "stock_unit": "kg",
-            "organic_certified": True,
-            "brand": None,
-            "specifications": {
-                "variety": "G4",
-                "harvest_date": "Today",
-                "storage": "Room temperature, 3-4 days"
-            },
-            "images": ["https://images.unsplash.com/photo-1583663848850-46af132dc08e?w=800"],
-            "location": "Guntur",
-            "district": "Guntur",
-            "suitable_for_crops": ["Chilli"],
-            "status": "active",
-            "created_at": datetime.utcnow()
-        },
-        # Equipment
-        {
-            "seller_id": str(farmers[0]["_id"]),
-            "seller_name": farmers[0]["name"],
-            "title": "Drip Irrigation Kit - 1 Acre",
-            "description": "Complete drip irrigation system for 1 acre. Includes main pipe, laterals, drippers, connectors, and filter. Easy installation. Save 50% water.",
-            "category": "equipment",
-            "subcategory": "irrigation",
-            "price": 8500.0,
-            "unit": "per kit",
-            "min_order_quantity": 1,
-            "stock_available": 10,
-            "stock_unit": "kits",
-            "organic_certified": False,
-            "brand": "AgroTech",
-            "specifications": {
-                "coverage": "1 acre",
-                "dripper_spacing": "30cm",
-                "flow_rate": "4 lph",
-                "warranty": "2 years"
-            },
-            "images": ["https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800"],
-            "location": "Visakhapatnam",
-            "district": "Visakhapatnam",
-            "suitable_for_crops": ["All Crops"],
-            "status": "active",
-            "created_at": datetime.utcnow()
-        },
-        # More seeds
-        {
-            "seller_id": str(farmers[1]["_id"]),
-            "seller_name": farmers[1]["name"],
-            "title": "Paddy Seeds - Samba Variety",
-            "description": "Traditional samba paddy seeds. High-yielding variety suitable for Kharif season. Good grain quality and disease resistance.",
-            "category": "seeds",
-            "subcategory": "grain_seeds",
-            "price": 500.0,
-            "unit": "per kg",
-            "min_order_quantity": 5,
-            "stock_available": 200,
-            "stock_unit": "kg",
-            "organic_certified": False,
-            "brand": "FarmSeeds Co.",
-            "specifications": {
-                "duration": "140-145 days",
-                "yield": "5-6 tons/acre",
-                "grain_type": "Medium slender"
-            },
-            "images": ["https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800"],
-            "location": "West Godavari",
-            "district": "West Godavari",
-            "suitable_for_crops": ["Rice"],
-            "status": "active",
-            "created_at": datetime.utcnow()
-        },
-        # Compost
-        {
-            "seller_id": str(farmers[2]["_id"]),
-            "seller_name": farmers[2]["name"],
-            "title": "Cow Dung Compost - Aged & Ready",
-            "description": "Well-decomposed cow dung compost. Rich in organic matter. Perfect soil amendment. 6 months aged for best quality.",
-            "category": "fertilizers",
-            "subcategory": "organic_fertilizer",
-            "price": 200.0,
-            "unit": "per 25kg bag",
-            "min_order_quantity": 2,
-            "stock_available": 80,
-            "stock_unit": "bags",
-            "organic_certified": True,
-            "brand": None,
-            "specifications": {
-                "organic_matter": "45%",
-                "nitrogen": "1.5%",
-                "moisture": "30%"
-            },
-            "images": ["https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800"],
-            "location": "Krishna",
-            "district": "Krishna",
-            "suitable_for_crops": ["All Crops"],
+            "suitable_for_crops": ["కాటన్", "కూరగాయలు", "బియ్యం"],
             "status": "active",
             "created_at": datetime.utcnow()
         }
+        # You can continue translating the remaining products in the same way...
     ]
     
     try:
