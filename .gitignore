@@ -6,6 +6,12 @@ __pycache__/
 backend/__pycache__/
 backend/.env
 backend/organic
+backend/models/*.pyc
+backend/models/*.pyo
+backend/models/*.pyd
+backend/models/*.pkl
+
+
 # Virtual environment
 venv/
 .env
