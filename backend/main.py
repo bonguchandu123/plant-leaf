@@ -74,6 +74,8 @@ gemini_model = genai.GenerativeModel('gemini-flash-latest')
 # Load AI Model for Disease Detection
 disease_model = tf.keras.models.load_model(settings.MODEL_PATH)
 
+
+
 # Load class names
 with open(settings.CLASS_NAMES_PATH, 'r') as f:
     class_names = [line.strip() for line in f.readlines()]

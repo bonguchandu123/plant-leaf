@@ -26,8 +26,12 @@ class Settings(BaseSettings):
     STRIPE_PUBLISHABLE_KEY: str = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
     
     # AI Model Configuration
-    MODEL_PATH: str = os.getenv("MODEL_PATH", "../plant-leaf/models/plant_disease_model.h5")
-    CLASS_NAMES_PATH: str = os.getenv("CLASS_NAMES_PATH", "../plant-leaf/models/class_names.txt")
+    MODEL_PATH: str = os.getenv("MODEL_PATH", "./models/plant_disease_model.h5")
+    
+
+
+    CLASS_NAMES_PATH: str = os.getenv("CLASS_NAMES_PATH", "./models/class_names.txt")
+    
     
     # Gemini AI Configuration
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")

@@ -18,4 +18,3 @@ stripe
 requests
 email-validator
 pydantic[email]
-
