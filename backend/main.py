@@ -71,10 +71,73 @@ cloudinary.config(
 genai.configure(api_key=settings.GEMINI_API_KEY)
 gemini_model = genai.GenerativeModel('gemini-flash-latest')
 
-# Load AI Model for Disease Detection
-disease_model = tf.keras.models.load_model(settings.MODEL_PATH, compile=False)
 
 
+import tensorflow as tf
+import h5py
+import json
+import tempfile
+import shutil
+
+def fix_model_config(model_path):
+    """Fix BatchNormalization axis issue in saved model"""
+    
+    # Create a temporary copy
+    temp_path = model_path + '.tmp'
+    shutil.copy2(model_path, temp_path)
+    
+    with h5py.File(temp_path, 'r+') as f:
+        # Check if model config exists
+        if 'model_config' in f.attrs:
+            # Load config
+            config_str = f.attrs['model_config']
+            if isinstance(config_str, bytes):
+                config_str = config_str.decode('utf-8')
+            
+            config = json.loads(config_str)
+            
+            # Fix BatchNormalization layers
+            def fix_layer_config(layer_config):
+                if layer_config.get('class_name') == 'BatchNormalization':
+                    if 'config' in layer_config:
+                        axis = layer_config['config'].get('axis')
+                        # Convert list to single integer
+                        if isinstance(axis, list) and len(axis) == 1:
+                            layer_config['config']['axis'] = axis[0]
+                            print(f"Fixed BatchNormalization axis: {axis} -> {axis[0]}")
+                
+                # Recursively fix nested configs
+                if 'config' in layer_config:
+                    if 'layers' in layer_config['config']:
+                        for layer in layer_config['config']['layers']:
+                            fix_layer_config(layer)
+                
+                return layer_config
+            
+            # Fix all layers
+            if 'config' in config:
+                if 'layers' in config['config']:
+                    for layer in config['config']['layers']:
+                        fix_layer_config(layer)
+            
+            # Save fixed config
+            fixed_config_str = json.dumps(config)
+            f.attrs.modify('model_config', fixed_config_str.encode('utf-8'))
+    
+    return temp_path
+
+try:
+    # Try loading directly first
+    disease_model = tf.keras.models.load_model(settings.MODEL_PATH, compile=False)
+    print("✅ Model loaded successfully")
+except TypeError as e:
+    if "axis" in str(e):
+        print("⚠️ Detected axis format issue, fixing...")
+        fixed_model_path = fix_model_config(settings.MODEL_PATH)
+        disease_model = tf.keras.models.load_model(fixed_model_path, compile=False)
+        print("✅ Model loaded with fix")
+    else:
+        raise
 
 # Load class names
 with open(settings.CLASS_NAMES_PATH, 'r') as f:
