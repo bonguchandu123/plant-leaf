@@ -44,5 +44,4 @@ email-validator==2.2.0
 # Utilities
 python-dotenv==1.0.1
 
-# CORS
-python-cors==1.0.0
+
