@@ -72,7 +72,7 @@ genai.configure(api_key=settings.GEMINI_API_KEY)
 gemini_model = genai.GenerativeModel('gemini-flash-latest')
 
 # Load AI Model for Disease Detection
-disease_model = tf.keras.models.load_model(settings.MODEL_PATH)
+disease_model = tf.keras.models.load_model(settings.MODEL_PATH, compile=False)
 
 
 
