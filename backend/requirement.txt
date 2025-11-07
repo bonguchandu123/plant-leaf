@@ -6,6 +6,7 @@ python-multipart==0.0.17
 # Database
 motor==3.6.0
 pymongo==4.10.1
+tensorflow-cpu==2.16.2
 
 # Authentication & Security
 python-jose[cryptography]==3.3.0
@@ -16,7 +17,7 @@ bcrypt==4.2.0
 cloudinary==1.41.0
 
 # AI & ML - CRITICAL VERSIONS
-tensorflow==2.17.0
+tensorflow==2.16.2
 keras==3.6.0
 numpy==1.26.4
 Pillow==10.4.0
