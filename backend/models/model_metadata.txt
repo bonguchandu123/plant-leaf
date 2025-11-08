@@ -1,0 +1,20 @@
+Model Training Metadata
+==================================================
+Image Size: 224x224
+Batch Size: 32
+Epochs: 50
+Number of Classes: 11
+Total Parameters: 2,621,771
+
+Classes:
+  1. Apple_Ceader_rust
+  2. Apple__Apple_scab
+  3. Apple__Black_rot
+  4. Apple_healthy
+  5. Bacterial_Leaf_Blight
+  6. Blue_Berry
+  7. Brown_Spot
+  8. Cherry_healthy
+  9. Cherry_powder
+  10. Corn
+  11. Leaf_Smut

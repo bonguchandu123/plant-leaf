@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -15,17 +16,76 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCh
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Configuration
+# ============================================================================
+# PATH CONFIGURATION
+# ============================================================================
+# Root directory (plant-leaf/)
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Backend directory (plant-leaf/backend/)
+BACKEND_DIR = os.path.join(ROOT_DIR, "backend")
+
+# Models directory (plant-leaf/backend/models/)
+MODELS_DIR = os.path.join(BACKEND_DIR, "models")
+
+# Dataset directory (plant-leaf/dataset/)
+DATASET_PATH = os.path.join(ROOT_DIR, "dataset")
+
+print("=" * 60)
+print("PATH CONFIGURATION")
+print("=" * 60)
+print(f"Root Directory: {ROOT_DIR}")
+print(f"Backend Directory: {BACKEND_DIR}")
+print(f"Models Directory: {MODELS_DIR}")
+print(f"Dataset Directory: {DATASET_PATH}")
+print("=" * 60)
+
+# Create backend and models directories if they don't exist
+os.makedirs(BACKEND_DIR, exist_ok=True)
+os.makedirs(MODELS_DIR, exist_ok=True)
+
+# ============================================================================
+# FIX BATCHNORMALIZATION AXIS ISSUE
+# ============================================================================
+print("\nApplying BatchNormalization axis fix...")
+
+# Store original BatchNormalization __init__
+original_bn_init = tf.keras.layers.BatchNormalization.__init__
+
+def fixed_bn_init(self, axis=-1, **kwargs):
+    """Fixed BatchNormalization that converts list axis to int"""
+    # Convert list to int if needed
+    if isinstance(axis, list):
+        if len(axis) == 1:
+            axis = axis[0]
+        else:
+            # For multiple axes, keep as tuple
+            axis = tuple(axis)
+    original_bn_init(self, axis=axis, **kwargs)
+
+# Apply the fix
+tf.keras.layers.BatchNormalization.__init__ = fixed_bn_init
+print("✅ BatchNormalization fix applied")
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
 IMG_SIZE = 224
 BATCH_SIZE = 32
 EPOCHS = 50
-DATASET_PATH = "dataset"
-MODEL_OUTPUT_PATH = "models/plant_disease_model.pkl"
 
-# Create models directory if not exists
-os.makedirs("models", exist_ok=True)
+# Output paths (all in backend/models/)
+MODEL_H5_PATH = os.path.join(MODELS_DIR, "plant_disease_model.h5")
+MODEL_KERAS_PATH = os.path.join(MODELS_DIR, "plant_disease_model.keras")
+MODEL_PKL_PATH = os.path.join(MODELS_DIR, "plant_disease_model.pkl")
+CLASS_NAMES_PATH = os.path.join(MODELS_DIR, "class_names.txt")
+METADATA_PATH = os.path.join(MODELS_DIR, "model_metadata.txt")
+CHECKPOINT_PATH = os.path.join(MODELS_DIR, "best_model_checkpoint.h5")
+CONFUSION_MATRIX_PATH = os.path.join(MODELS_DIR, "confusion_matrix.png")
+TRAINING_HISTORY_PATH = os.path.join(MODELS_DIR, "training_history.png")
+MANIFEST_PATH = os.path.join(ROOT_DIR, "dataset_manifest.csv")
 
-print("=" * 60)
+print("\n" + "=" * 60)
 print("Plant Disease Detection - Model Training")
 print("=" * 60)
 print(f"Image Size: {IMG_SIZE}x{IMG_SIZE}")
@@ -94,8 +154,8 @@ def load_dataset(classes):
     
     # Create manifest CSV
     df = pd.DataFrame({'image_path': image_paths, 'label': labels})
-    df.to_csv('dataset_manifest.csv', index=False)
-    print("✓ Dataset manifest saved to: dataset_manifest.csv")
+    df.to_csv(MANIFEST_PATH, index=False)
+    print(f"✓ Dataset manifest saved to: {MANIFEST_PATH}")
     
     return image_paths, labels
 
@@ -151,22 +211,29 @@ def create_data_generators(X_train, y_train, X_val, y_val, X_test, y_test):
     # Helper function to load and preprocess images
     def load_and_preprocess(paths, labels):
         images = []
-        for path in paths:
+        valid_labels = []
+        for i, path in enumerate(paths):
             try:
                 img = Image.open(path).convert('RGB')
                 img = img.resize((IMG_SIZE, IMG_SIZE))
                 images.append(np.array(img))
+                valid_labels.append(labels[i])
             except Exception as e:
                 print(f"Warning: Failed to load {path}: {e}")
-        return np.array(images), np.array(labels[:len(images)])
+        return np.array(images), np.array(valid_labels)
     
     # Load images
     print("  - Loading training images...")
     X_train_imgs, y_train_arr = load_and_preprocess(X_train, y_train)
+    print(f"    Loaded: {len(X_train_imgs)} images")
+    
     print("  - Loading validation images...")
     X_val_imgs, y_val_arr = load_and_preprocess(X_val, y_val)
+    print(f"    Loaded: {len(X_val_imgs)} images")
+    
     print("  - Loading test images...")
     X_test_imgs, y_test_arr = load_and_preprocess(X_test, y_test)
+    print(f"    Loaded: {len(X_test_imgs)} images")
     
     print("✓ Images loaded and preprocessed successfully")
     
@@ -190,15 +257,17 @@ def build_model(num_classes):
     # Freeze base model layers
     base_model.trainable = False
     
-    # Build custom top layers
+    # Build custom top layers WITHOUT axis parameter in BatchNormalization
+    # After GlobalAveragePooling2D, the tensor is 2D, so we use default axis=-1
     model = keras.Sequential([
         base_model,
         layers.GlobalAveragePooling2D(),
         layers.Dropout(0.3),
         layers.Dense(256, activation='relu'),
-        layers.BatchNormalization(),
+        layers.BatchNormalization(),  # ✅ No axis parameter - uses default axis=-1
         layers.Dropout(0.3),
         layers.Dense(128, activation='relu'),
+        layers.BatchNormalization(),  # ✅ No axis parameter - uses default axis=-1
         layers.Dropout(0.2),
         layers.Dense(num_classes, activation='softmax')
     ])
@@ -212,6 +281,10 @@ def build_model(num_classes):
     
     print("✓ Model architecture created")
     print(f"✓ Total parameters: {model.count_params():,}")
+    
+    # Print model summary
+    print("\nModel Summary:")
+    model.summary()
     
     return model
 
@@ -243,7 +316,7 @@ def train_model(model, train_data, val_data, train_datagen):
     )
     
     checkpoint = ModelCheckpoint(
-        'models/best_model_checkpoint.h5',
+        CHECKPOINT_PATH,
         monitor='val_accuracy',
         save_best_only=True,
         verbose=1
@@ -276,6 +349,7 @@ def evaluate_model(model, test_data, label_encoder):
     X_test, y_test = test_data
     
     # Predictions
+    print("  - Making predictions...")
     y_pred_probs = model.predict(X_test, verbose=0)
     y_pred = np.argmax(y_pred_probs, axis=1)
     
@@ -285,6 +359,7 @@ def evaluate_model(model, test_data, label_encoder):
     print(classification_report(y_test, y_pred, target_names=label_encoder.classes_))
     
     # Confusion matrix
+    print("\n  - Generating confusion matrix...")
     cm = confusion_matrix(y_test, y_pred)
     
     # Adjust figure size based on number of classes
@@ -302,8 +377,8 @@ def evaluate_model(model, test_data, label_encoder):
     plt.xticks(rotation=45, ha='right')
     plt.yticks(rotation=0)
     plt.tight_layout()
-    plt.savefig('models/confusion_matrix.png', dpi=300, bbox_inches='tight')
-    print("\n✓ Confusion matrix saved to: models/confusion_matrix.png")
+    plt.savefig(CONFUSION_MATRIX_PATH, dpi=300, bbox_inches='tight')
+    print(f"  ✓ Confusion matrix saved to: {CONFUSION_MATRIX_PATH}")
     
     # Test accuracy
     test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
@@ -340,36 +415,60 @@ def plot_training_history(history):
     ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('models/training_history.png', dpi=300, bbox_inches='tight')
-    print("✓ Training history saved to: models/training_history.png")
+    plt.savefig(TRAINING_HISTORY_PATH, dpi=300, bbox_inches='tight')
+    print(f"✓ Training history saved to: {TRAINING_HISTORY_PATH}")
 
 
 def save_model(model, label_encoder):
     """
-    Save model and label encoder
+    Save model and label encoder in multiple formats
     """
-    print(f"\nSaving model to: {MODEL_OUTPUT_PATH}")
+    print(f"\nSaving model to backend/models/...")
     
-    # Save as dictionary containing model and label encoder (PKL format)
+    # 1. Save as HDF5 (H5) - Most compatible
+    print(f"  - Saving as H5: {MODEL_H5_PATH}")
+    model.save(MODEL_H5_PATH, save_format='h5')
+    print("    ✓ H5 format saved")
+    
+    # 2. Save as Keras format (recommended for TF 2.x)
+    print(f"  - Saving as Keras: {MODEL_KERAS_PATH}")
+    model.save(MODEL_KERAS_PATH)
+    print("    ✓ Keras format saved")
+    
+    # 3. Save as PKL (with label encoder)
+    print(f"  - Saving as PKL: {MODEL_PKL_PATH}")
     model_package = {
         'model': model,
         'label_encoder': label_encoder,
         'classes': label_encoder.classes_.tolist(),
         'img_size': IMG_SIZE
     }
+    joblib.dump(model_package, MODEL_PKL_PATH)
+    print("    ✓ PKL format saved")
     
-    joblib.dump(model_package, MODEL_OUTPUT_PATH)
-    print("✓ Model saved successfully as PKL!")
-    
-    # Save in new Keras format (recommended)
-    model.save('models/plant_disease_model.h5')
-    print("✓ Model also saved as: models/plant_disease_model.keras")
-    
-    # Save class names separately for reference
-    with open('models/class_names.txt', 'w') as f:
+    # 4. Save class names separately for easy reference
+    print(f"  - Saving class names: {CLASS_NAMES_PATH}")
+    with open(CLASS_NAMES_PATH, 'w', encoding='utf-8') as f:
         for cls in label_encoder.classes_:
             f.write(f"{cls}\n")
-    print("✓ Class names saved to: models/class_names.txt")
+    print("    ✓ Class names saved")
+    
+    # 5. Save model metadata
+    print(f"  - Saving metadata: {METADATA_PATH}")
+    with open(METADATA_PATH, 'w', encoding='utf-8') as f:
+        f.write(f"Model Training Metadata\n")
+        f.write(f"=" * 50 + "\n")
+        f.write(f"Image Size: {IMG_SIZE}x{IMG_SIZE}\n")
+        f.write(f"Batch Size: {BATCH_SIZE}\n")
+        f.write(f"Epochs: {EPOCHS}\n")
+        f.write(f"Number of Classes: {len(label_encoder.classes_)}\n")
+        f.write(f"Total Parameters: {model.count_params():,}\n")
+        f.write(f"\nClasses:\n")
+        for i, cls in enumerate(label_encoder.classes_, 1):
+            f.write(f"  {i}. {cls}\n")
+    print("    ✓ Metadata saved")
+    
+    print("\n✓ All model files saved successfully!")
 
 
 def main():
@@ -377,6 +476,26 @@ def main():
     Main training pipeline
     """
     try:
+        print("\n" + "="*60)
+        print("STARTING TRAINING PIPELINE")
+        print("="*60 + "\n")
+        
+        # Verify directories exist
+        if not os.path.exists(DATASET_PATH):
+            print(f"\n❌ Error: Dataset folder not found at: {DATASET_PATH}")
+            print("\nExpected structure:")
+            print("plant-leaf/")
+            print("  ├── backend/")
+            print("  │   ├── main.py")
+            print("  │   └── models/  (will be created)")
+            print("  ├── dataset/")
+            print("  │   ├── Disease_Class_1/")
+            print("  │   │   ├── image1.jpg")
+            print("  │   │   └── ...")
+            print("  │   └── Disease_Class_2/")
+            print("  └── train_model.py (this file)")
+            return
+        
         # Step 0: Discover all disease classes
         classes = discover_classes()
         
@@ -411,19 +530,30 @@ def main():
         save_model(model, label_encoder)
         
         print("\n" + "=" * 60)
-        print("✓ TRAINING COMPLETE!")
+        print("✅ TRAINING COMPLETE!")
         print("=" * 60)
         print(f"✓ Total classes trained: {len(classes)}")
-        print(f"✓ Model saved to: {MODEL_OUTPUT_PATH}")
-        print(f"✓ Keras model: models/plant_disease_model.keras")
-        print(f"✓ Class names: models/class_names.txt")
-        print("\nYou can now use this model in your FastAPI backend.")
-        print("=" * 60)
+        print(f"✓ Model files saved in: {MODELS_DIR}")
+        print(f"  - plant_disease_model.h5")
+        print(f"  - plant_disease_model.keras")
+        print(f"  - plant_disease_model.pkl")
+        print(f"  - class_names.txt")
+        print(f"  - model_metadata.txt")
+        print(f"  - confusion_matrix.png")
+        print(f"  - training_history.png")
+        print(f"  - best_model_checkpoint.h5")
+        print(f"\n✓ You can now use this model in your FastAPI backend!")
+        print(f"✓ Update config.py MODEL_PATH to: ./models/plant_disease_model.h5")
+        print("=" * 60 + "\n")
         
     except Exception as e:
         print(f"\n❌ Error during training: {str(e)}")
         import traceback
         traceback.print_exc()
+        print("\nPlease check:")
+        print("  1. Dataset folder structure is correct")
+        print("  2. All dependencies are installed")
+        print("  3. Sufficient disk space available")
 
 
 if __name__ == "__main__":

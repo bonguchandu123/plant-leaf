@@ -1979,91 +1979,137 @@ async def mark_solved(
     
     return {"message": "Post marked as solved"}
 
+def serialize_doc(doc):
+    """Safely convert MongoDB document to JSON-safe dict."""
+    if not doc:
+        return None
 
+    new_doc = {}
+    for key, value in doc.items():
+        if isinstance(value, ObjectId):
+            new_doc[key] = str(value)
+        elif isinstance(value, datetime):
+            new_doc[key] = value.isoformat()
+        elif isinstance(value, dict):
+            new_doc[key] = serialize_doc(value)
+        elif isinstance(value, list):
+            new_doc[key] = [
+                serialize_doc(v) if isinstance(v, dict) else v for v in value
+            ]
+        else:
+            new_doc[key] = value
+
+    # Ensure an _id key always exists if present in Mongo
+    if "_id" in doc and "_id" not in new_doc:
+        new_doc["_id"] = str(doc["_id"])
+
+    return new_doc
 @app.post("/api/crop-photos/{photo_id}/share-to-community")
 async def share_analysis_to_community(
     photo_id: str,
     share_data: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    """Share crop analysis to community forum with language support"""
-    
-    user_language = current_user.get("language_preference", "telugu")
-    
-    photo = await db.crop_photos.find_one({"_id": ObjectId(photo_id)})
-    
-    if not photo:
-        error_msg = "ఫోటో కనుగొనబడలేదు" if user_language == "telugu" else "Photo not found"
-        raise HTTPException(status_code=404, detail=error_msg)
-    
-    if photo["user_id"] != str(current_user["_id"]):
-        error_msg = "అధికారం లేదు" if user_language == "telugu" else "Not authorized"
-        raise HTTPException(status_code=403, detail=error_msg)
-    
-    # Create community post with analysis reference
-    title = share_data.get("title")
-    content = share_data.get("content")
-    
-    # Ensure image URL is in media_urls
-    media_urls = share_data.get("media_urls", [])
-    if photo["image_url"] not in media_urls:
-        media_urls.insert(0, photo["image_url"])
-    
-    post_doc = {
-        "title": title,
-        "content_text": content,
-        "media_urls": media_urls,
-        "author_id": str(current_user["_id"]),
-        "author_name": current_user["name"],
-        "location": current_user.get("village"),
-        "tags": share_data.get("tags", []),
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
-        "comments": [],
-        "likes": 0,
-        "views": 0,
-        "helpful_count": 0,
-        "analysis_reference": {
-            "photo_id": photo_id,
-            "image_url": photo["image_url"],
-            "disease": photo.get("disease"),
-            "confidence": photo.get("confidence_score"),
-            "suggested_treatment": photo.get("suggested_treatment")
-        },
-        "is_question": True,
-        "is_solved": False,
-        "language": user_language  # Add language tag
-    }
-    
-    result = await db.community_posts.insert_one(post_doc)
-    
-    # Update photo with community post reference
-    await db.crop_photos.update_one(
-        {"_id": ObjectId(photo_id)},
-        {"$set": {"community_post_id": str(result.inserted_id)}}
-    )
-    
-    # Broadcast to WebSocket
-    await manager.broadcast({
-        "type": "new_post",
-        "post": {
-            "id": str(result.inserted_id),
-            "title": title,
-            "author": current_user["name"],
-            "has_analysis": True,
-            "image_url": photo["image_url"],
-            "language": user_language,
-            "created_at": datetime.utcnow().isoformat()
-        }
-    })
-    
-    success_msg = "విశ్లేషణ విజయవంతంగా సంఘానికి పంచుకోబడింది" if user_language == "telugu" else "Analysis shared to community successfully"
-    
-    return {
-        "post_id": str(result.inserted_id),
-        "message": success_msg
-    }
+    """Share crop analysis to community forum with safe serialization"""
 
+    user_language = current_user.get("language_preference", "telugu")
+
+    try:
+        # ✅ Handle ObjectId safely
+        query = {"_id": ObjectId(photo_id)} if ObjectId.is_valid(photo_id) else {"_id": photo_id}
+        photo = await db.crop_photos.find_one(query)
+
+        if not photo:
+            error_msg = "ఫోటో కనుగొనబడలేదు" if user_language == "telugu" else "Photo not found"
+            raise HTTPException(status_code=404, detail=error_msg)
+
+        if photo["user_id"] != str(current_user["_id"]):
+            error_msg = "అధికారం లేదు" if user_language == "telugu" else "Not authorized"
+            raise HTTPException(status_code=403, detail=error_msg)
+
+        # ✅ Build post data
+        title = share_data.get("title")
+        content = share_data.get("content")
+        media_urls = share_data.get("media_urls", [])
+
+        if photo.get("image_url") and photo["image_url"] not in media_urls:
+            media_urls.insert(0, photo["image_url"])
+
+        post_doc = {
+            "title": title,
+            "content_text": content,
+            "media_urls": media_urls,
+            "author_id": str(current_user["_id"]),
+            "author_name": current_user["name"],
+            "location": current_user.get("village"),
+            "tags": share_data.get("tags", []),
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+            "comments": [],
+            "likes": 0,
+            "views": 0,
+            "helpful_count": 0,
+            "analysis_reference": {
+                "photo_id": photo_id,
+                "image_url": photo.get("image_url"),
+                "disease": photo.get("disease"),
+                "confidence": photo.get("confidence_score"),
+                "suggested_treatment": photo.get("suggested_treatment")
+            },
+            "is_question": True,
+            "is_solved": False,
+            "language": user_language
+        }
+
+        # ✅ Insert the community post
+        result = await db.community_posts.insert_one(post_doc)
+
+        # ✅ Update crop photo reference
+        await db.crop_photos.update_one(
+            query, {"$set": {"community_post_id": str(result.inserted_id)}}
+        )
+
+        # ✅ Fetch the newly inserted post
+        new_post = await db.community_posts.find_one({"_id": result.inserted_id})
+        if not new_post:
+            raise HTTPException(status_code=500, detail="Failed to retrieve new post after insertion")
+
+        # ✅ Serialize safely
+        new_post = serialize_doc(new_post)
+
+        # ⚡ Add fallback if `_id` is missing for any reason
+        post_id = new_post.get("_id") or str(result.inserted_id)
+
+        # ✅ WebSocket broadcast (safe access)
+        await manager.broadcast({
+            "type": "new_post",
+            "post": {
+                "id": post_id,
+                "title": new_post.get("title", ""),
+                "author": new_post.get("author_name", current_user["name"]),
+                "has_analysis": True,
+                "image_url": new_post.get("analysis_reference", {}).get("image_url"),
+                "language": new_post.get("language", user_language),
+                "created_at": new_post.get("created_at", datetime.utcnow().isoformat())
+            }
+        })
+
+        success_msg = (
+            "విశ్లేషణ విజయవంతంగా సంఘానికి పంచుకోబడింది"
+            if user_language == "telugu"
+            else "Analysis shared to community successfully"
+        )
+
+        return {
+            "post": new_post,
+            "message": success_msg
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error sharing analysis to community: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 @app.get("/api/community/trending-topics")
 async def get_trending_topics(
     limit: int = 10,
@@ -2520,6 +2566,442 @@ async def get_solution_detail(
     }
 # Fixed Update Organic Solution Endpoint
 
+# Add these endpoints BEFORE the chatbot section in your main.py
+# Place them around line 2500-2600 (before chatbot endpoints)
+
+# ============= PROFILE MANAGEMENT ENDPOINTS =============
+
+@app.get("/api/profile")
+async def get_user_profile(current_user: dict = Depends(get_current_user)):
+    """Get current user's complete profile"""
+    
+    user_id = str(current_user["_id"])
+    
+    # Get user progress
+    progress = await db.user_progress.find_one({"user_id": user_id})
+    
+    # Get statistics
+    total_photos = await db.crop_photos.count_documents({"user_id": user_id})
+    total_treatments = await db.treatment_submissions.count_documents({"user_id": user_id})
+    total_posts = await db.community_posts.count_documents({"author_id": user_id})
+    total_videos = await db.video_progress.count_documents({
+        "user_id": user_id,
+        "completed": True
+    })
+    
+    # Get total orders
+    total_orders = await db.product_orders.count_documents({"buyer_id": user_id})
+    
+    # Get consultations
+    total_consultations = await db.consultation_sessions.count_documents({
+        "farmer_id": user_id,
+        "status": "completed"
+    })
+    
+    return {
+        "user": {
+            "id": user_id,
+            "name": current_user["name"],
+            "phone": current_user.get("phone"),
+            "email": current_user.get("email"),
+            "role": current_user.get("role", "farmer"),
+            "language_preference": current_user.get("language_preference", "telugu"),
+            "village": current_user.get("village"),
+            "district": current_user.get("district"),
+            "state": current_user.get("state"),
+            "badges": current_user.get("badges", []),
+            "streak_count": current_user.get("streak_count", 0),
+            "created_at": current_user["created_at"].isoformat()
+        },
+        "statistics": {
+            "crops_monitored": progress.get("crops_monitored", 0) if progress else 0,
+            "treatments_applied": progress.get("treatments_applied", 0) if progress else 0,
+            "success_rate": progress.get("success_rate", 0) if progress else 0,
+            "learning_sessions": progress.get("learning_sessions_completed", 0) if progress else 0,
+            "community_posts": total_posts,
+            "total_photos": total_photos,
+            "videos_watched": total_videos,
+            "total_orders": total_orders,
+            "consultations": total_consultations
+        }
+    }
+
+
+@app.put("/api/profile/update")
+async def update_user_profile(
+    profile_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update user profile information"""
+    
+    user_id = str(current_user["_id"])
+    
+    # Allowed fields to update
+    allowed_fields = ["name", "email", "village", "district", "state", "language_preference"]
+    
+    update_data = {
+        key: value for key, value in profile_data.items() 
+        if key in allowed_fields and value is not None
+    }
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    update_data["updated_at"] = datetime.utcnow()
+    
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {
+        "message": "Profile updated successfully",
+        "updated_fields": list(update_data.keys())
+    }
+
+
+@app.post("/api/profile/change-password")
+async def change_password(
+    password_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Change user password"""
+    
+    current_password = password_data.get("current_password")
+    new_password = password_data.get("new_password")
+    
+    if not current_password or not new_password:
+        raise HTTPException(
+            status_code=400,
+            detail="Current password and new password are required"
+        )
+    
+    if len(new_password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="New password must be at least 6 characters"
+        )
+    
+    # Verify current password
+    if not verify_password(current_password, current_user["password_hash"]):
+        raise HTTPException(
+            status_code=400,
+            detail="Current password is incorrect"
+        )
+    
+    # Update password
+    new_password_hash = get_password_hash(new_password)
+    
+    await db.users.update_one(
+        {"_id": ObjectId(current_user["_id"])},
+        {"$set": {"password_hash": new_password_hash, "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Password changed successfully"}
+
+
+@app.get("/api/profile/activity")
+async def get_user_activity(
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get user's recent activity timeline"""
+    
+    user_id = str(current_user["_id"])
+    activities = []
+    
+    # Recent crop analyses (last 10)
+    photos = await db.crop_photos.find({
+        "user_id": user_id
+    }).sort("uploaded_at", -1).limit(10).to_list(10)
+    
+    for photo in photos:
+        activities.append({
+            "type": "crop_analysis",
+            "title": f"Analyzed crop for {photo.get('disease', 'issue')}",
+            "description": f"{int(photo.get('confidence_score', 0)*100)}% confidence",
+            "timestamp": photo["uploaded_at"].isoformat(),
+            "icon": "camera",
+            "data": {
+                "photo_id": str(photo["_id"]),
+                "disease": photo.get("disease"),
+                "confidence": photo.get("confidence_score")
+            }
+        })
+    
+    # Recent treatments (last 10)
+    treatments = await db.solution_applications.find({
+        "user_id": user_id
+    }).sort("applied_at", -1).limit(10).to_list(10)
+    
+    for treatment in treatments:
+        solution = await db.organic_solutions.find_one({"_id": ObjectId(treatment["solution_id"])})
+        activities.append({
+            "type": "treatment",
+            "title": "Applied organic treatment",
+            "description": solution["title"] if solution else "Treatment applied",
+            "timestamp": treatment["applied_at"].isoformat(),
+            "icon": "leaf",
+            "data": {
+                "status": treatment["status"],
+                "outcome": treatment.get("outcome")
+            }
+        })
+    
+    # Recent community posts (last 10)
+    posts = await db.community_posts.find({
+        "author_id": user_id
+    }).sort("created_at", -1).limit(10).to_list(10)
+    
+    for post in posts:
+        activities.append({
+            "type": "community",
+            "title": f"Posted: {post['title'][:50]}",
+            "description": f"{len(post.get('comments', []))} comments, {post.get('likes', 0)} likes",
+            "timestamp": post["created_at"].isoformat(),
+            "icon": "users",
+            "data": {
+                "post_id": str(post["_id"]),
+                "is_solved": post.get("is_solved", False)
+            }
+        })
+    
+    # Recent video completions (last 10)
+    videos = await db.video_progress.find({
+        "user_id": user_id,
+        "completed": True
+    }).sort("completed_at", -1).limit(10).to_list(10)
+    
+    for video in videos:
+        video_data = await db.video_tutorials.find_one({"_id": ObjectId(video["video_id"])})
+        if video_data:
+            activities.append({
+                "type": "learning",
+                "title": "Completed video tutorial",
+                "description": video_data["title"],
+                "timestamp": video["completed_at"].isoformat() if video.get("completed_at") else video["last_watched_at"].isoformat(),
+                "icon": "video",
+                "data": {
+                    "video_id": video["video_id"],
+                    "category": video_data["category"]
+                }
+            })
+    
+    # Recent orders (last 5)
+    orders = await db.product_orders.find({
+        "buyer_id": user_id
+    }).sort("created_at", -1).limit(5).to_list(5)
+    
+    for order in orders:
+        activities.append({
+            "type": "purchase",
+            "title": "Purchased product",
+            "description": f"{order['product_title']} - ₹{order['total_price']}",
+            "timestamp": order["created_at"].isoformat(),
+            "icon": "shopping-cart",
+            "data": {
+                "order_id": str(order["_id"]),
+                "order_number": order["order_number"],
+                "status": order["order_status"]
+            }
+        })
+    
+    # Recent consultations (last 5)
+    consultations = await db.consultation_sessions.find({
+        "farmer_id": user_id,
+        "status": "completed"
+    }).sort("ended_at", -1).limit(5).to_list(5)
+    
+    for consult in consultations:
+        activities.append({
+            "type": "consultation",
+            "title": f"Consulted with {consult['specialist_name']}",
+            "description": f"{consult.get('session_type', 'chat').title()} session",
+            "timestamp": consult["ended_at"].isoformat() if consult.get("ended_at") else consult["created_at"].isoformat(),
+            "icon": "user-md",
+            "data": {
+                "session_id": str(consult["_id"]),
+                "duration": consult.get("duration_minutes")
+            }
+        })
+    
+    # Sort all activities by timestamp (most recent first)
+    activities.sort(key=lambda x: x["timestamp"], reverse=True)
+    
+    # Return limited results
+    return activities[:limit]
+
+
+@app.get("/api/profile/badges")
+async def get_user_badges(current_user: dict = Depends(get_current_user)):
+    """Get user's earned badges and achievements"""
+    
+    user_id = str(current_user["_id"])
+    
+    # Get progress data
+    progress = await db.user_progress.find_one({"user_id": user_id})
+    
+    crops_monitored = progress.get("crops_monitored", 0) if progress else 0
+    treatments_applied = progress.get("treatments_applied", 0) if progress else 0
+    success_rate = progress.get("success_rate", 0) if progress else 0
+    learning_sessions = progress.get("learning_sessions_completed", 0) if progress else 0
+    
+    # Community stats
+    posts_created = await db.community_posts.count_documents({"author_id": user_id})
+    
+    # Calculate badges
+    badges = []
+    
+    # Analysis badges
+    if crops_monitored >= 50:
+        badges.append({
+            "id": "master_analyst",
+            "name": "Master Analyst",
+            "description": "Analyzed 50+ crop photos",
+            "icon": "🔬",
+            "category": "analysis",
+            "progress": crops_monitored,
+            "target": 50,
+            "earned": True
+        })
+    elif crops_monitored >= 20:
+        badges.append({
+            "id": "expert_diagnostician",
+            "name": "Expert Diagnostician",
+            "description": "Analyzed 20+ crop photos",
+            "icon": "🔍",
+            "category": "analysis",
+            "progress": crops_monitored,
+            "target": 20,
+            "earned": True
+        })
+    else:
+        badges.append({
+            "id": "crop_monitor",
+            "name": "Crop Monitor",
+            "description": "Analyze 10 crop photos",
+            "icon": "🌾",
+            "category": "analysis",
+            "progress": crops_monitored,
+            "target": 10,
+            "earned": crops_monitored >= 10
+        })
+    
+    # Success badges
+    if success_rate >= 90:
+        badges.append({
+            "id": "success_champion",
+            "name": "Success Champion",
+            "description": "90%+ treatment success rate",
+            "icon": "🏆",
+            "category": "success",
+            "progress": success_rate,
+            "target": 90,
+            "earned": True
+        })
+    
+    # Organic badges
+    if treatments_applied >= 20:
+        badges.append({
+            "id": "organic_warrior",
+            "name": "Organic Warrior",
+            "description": "Applied 20+ organic solutions",
+            "icon": "🌱",
+            "category": "organic",
+            "progress": treatments_applied,
+            "target": 20,
+            "earned": True
+        })
+    else:
+        badges.append({
+            "id": "organic_advocate",
+            "name": "Organic Advocate",
+            "description": "Apply 10 organic solutions",
+            "icon": "🍃",
+            "category": "organic",
+            "progress": treatments_applied,
+            "target": 10,
+            "earned": treatments_applied >= 10
+        })
+    
+    # Community badges
+    if posts_created >= 10:
+        badges.append({
+            "id": "community_leader",
+            "name": "Community Leader",
+            "description": "Created 10+ helpful posts",
+            "icon": "👥",
+            "category": "community",
+            "progress": posts_created,
+            "target": 10,
+            "earned": True
+        })
+    
+    # Learning badges
+    if learning_sessions >= 10:
+        badges.append({
+            "id": "knowledge_seeker",
+            "name": "Knowledge Seeker",
+            "description": "Completed 10+ video tutorials",
+            "icon": "📚",
+            "category": "learning",
+            "progress": learning_sessions,
+            "target": 10,
+            "earned": True
+        })
+    else:
+        badges.append({
+            "id": "eager_learner",
+            "name": "Eager Learner",
+            "description": "Complete 5 video tutorials",
+            "icon": "📖",
+            "category": "learning",
+            "progress": learning_sessions,
+            "target": 5,
+            "earned": learning_sessions >= 5
+        })
+    
+    earned_badges = [b for b in badges if b["earned"]]
+    upcoming_badges = [b for b in badges if not b["earned"]]
+    
+    return {
+        "total_badges": len(earned_badges),
+        "earned_badges": earned_badges,
+        "upcoming_badges": upcoming_badges,
+        "streak_days": current_user.get("streak_count", 0)
+    }
+
+
+@app.delete("/api/profile/delete-account")
+async def delete_user_account(
+    confirmation: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete user account (requires password confirmation)"""
+    
+    password = confirmation.get("password")
+    
+    if not password:
+        raise HTTPException(status_code=400, detail="Password confirmation required")
+    
+    # Verify password
+    if not verify_password(password, current_user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Incorrect password")
+    
+    user_id = str(current_user["_id"])
+    
+    # Delete user data (you might want to soft delete instead)
+    await db.users.delete_one({"_id": ObjectId(user_id)})
+    await db.user_progress.delete_many({"user_id": user_id})
+    await db.crop_photos.delete_many({"user_id": user_id})
+    await db.treatment_submissions.delete_many({"user_id": user_id})
+    await db.community_posts.delete_many({"author_id": user_id})
+    await db.community_comments.delete_many({"user_id": user_id})
+    
+    return {"message": "Account deleted successfully"}
 
 @app.put("/api/organic-solutions/{solution_id}")
 async def update_organic_solution(
@@ -9755,6 +10237,9 @@ async def submit_chatbot_feedback(
     
     return {"message": "Feedback submitted successfully"}
 
+# Add these endpoints to your main.py file
+
+# ============= PROFILE MANAGEMENT ENDPOINTS =============
 
 @app.get("/")
 async def root():

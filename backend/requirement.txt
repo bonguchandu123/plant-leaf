@@ -11,6 +11,7 @@ Pillow
 google-generativeai
 pydantic-settings
 pydantic
+keras
 tensorflow
 scikit-learn
 numpy
