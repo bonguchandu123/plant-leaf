@@ -1,9 +1,6 @@
 fastapi
 uvicorn
 pydantic
-<<<<<<< HEAD
-keras
-=======
 pydantic-settings
 python-multipart
 motor
@@ -14,7 +11,6 @@ bcrypt
 python-jose
 cryptography
 cloudinary
->>>>>>> 7c6a7ee515cccbc5400811a15344db7ff4aac827
 tensorflow
 keras
 google-generativeai
