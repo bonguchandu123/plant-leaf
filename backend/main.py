@@ -330,19 +330,36 @@ async def update_language_preference(
     }
 
 
-@app.post("/auth/signup")
-async def signup(user_data: dict):
-    """User signup with proper validation and location data"""
+
+@app.post("/auth/signup", 
+    response_model=dict,
+    summary="User Signup",
+    description="Register a new user (farmer or specialist) with complete profile information"
+)
+async def signup(user_data: UserSignupRequest):
+    """
+    User signup with proper validation and location data
     
-    # Extract data
-    name = user_data.get("name")
-    phone = user_data.get("phone")
-    email = user_data.get("email")
-    password = user_data.get("password")
-    role = user_data.get("role", "farmer")
+    - **name**: Full name (required)
+    - **phone**: 10-digit phone number (required, unique)
+    - **email**: Email address (optional, unique if provided)
+    - **password**: Minimum 6 characters (required)
+    - **role**: 'farmer' or 'specialist' (default: farmer)
+    - **language_preference**: 'telugu', 'english', or 'hindi' (default: telugu)
+    - **village**: Village name (optional)
+    - **district**: District name (default: Visakhapatnam)
+    - **state**: State name (default: Andhra Pradesh)
+    
+    For specialists, additional fields:
+    - **specialization**: List of specialization areas
+    - **experience_years**: Years of experience
+    - **qualification**: Educational qualification
+    - **languages**: Languages spoken
+    - **bio**: Professional bio
+    """
     
     # Validation
-    if not all([name, phone, password]):
+    if not all([user_data.name, user_data.phone, user_data.password]):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Name, phone, and password are required"
@@ -351,8 +368,8 @@ async def signup(user_data: dict):
     # Check if user exists
     existing_user = await db.users.find_one({
         "$or": [
-            {"phone": phone},
-            {"email": email} if email else {}
+            {"phone": user_data.phone},
+            {"email": user_data.email} if user_data.email else {}
         ]
     })
     
@@ -362,26 +379,22 @@ async def signup(user_data: dict):
             detail="User with this phone or email already exists"
         )
     
-    # Get location data with defaults
-    village = user_data.get("village", "")
-    district = user_data.get("district", "Visakhapatnam")
-    state = user_data.get("state", "Andhra Pradesh")
-    
-    # Validate district is not a placeholder
+    # Validate district
+    district = user_data.district
     if district.lower() in ['districtname', 'district', '']:
         district = "Visakhapatnam"
     
     # Create user document
     user_doc = {
-        "name": name,
-        "phone": phone,
-        "email": email,
-        "password_hash": get_password_hash(password),
-        "role": role,
-        "language_preference": user_data.get("language_preference", "telugu"),
-        "village": village,
+        "name": user_data.name,
+        "phone": user_data.phone,
+        "email": user_data.email,
+        "password_hash": get_password_hash(user_data.password),
+        "role": user_data.role,
+        "language_preference": user_data.language_preference,
+        "village": user_data.village or "",
         "district": district,
-        "state": state,
+        "state": user_data.state,
         "badges": [],
         "streak_count": 0,
         "last_active": datetime.utcnow(),
@@ -420,19 +433,19 @@ async def signup(user_data: dict):
         "updated_at": datetime.utcnow()
     })
     
-    # NEW: Auto-create specialist profile if role is specialist
-    if role == "specialist":
+    # Auto-create specialist profile if role is specialist
+    if user_data.role == "specialist":
         await db.specialist_profiles.insert_one({
             "user_id": user_id,
-            "specialization": user_data.get("specialization", ["General Agriculture"]),
-            "experience_years": user_data.get("experience_years", 0),
-            "qualification": user_data.get("qualification", "Agricultural Expert"),
-            "languages": user_data.get("languages", ["telugu", "english"]),
-            "crops_expertise": user_data.get("crops_expertise", []),
-            "diseases_expertise": user_data.get("diseases_expertise", []),
-            "bio": user_data.get("bio", "Agricultural specialist ready to help farmers"),
-            "consultation_fee": user_data.get("consultation_fee", 0.0),
-            "is_online": False,  # Default to offline, specialist can change later
+            "specialization": user_data.specialization or ["General Agriculture"],
+            "experience_years": user_data.experience_years or 0,
+            "qualification": user_data.qualification or "Agricultural Expert",
+            "languages": user_data.languages or ["telugu", "english"],
+            "crops_expertise": [],
+            "diseases_expertise": [],
+            "bio": user_data.bio or "Agricultural specialist ready to help farmers",
+            "consultation_fee": 0.0,
+            "is_online": False,
             "last_active": datetime.utcnow(),
             "average_rating": 0.0,
             "total_consultations": 0,
@@ -470,15 +483,30 @@ async def signup(user_data: dict):
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": user_response
+        "user": user_response,
+        "message": "Account created successfully"
     }
-@app.post("/auth/login")
-async def login(login_data: dict):
-    """User login with phone/email and password"""
+
+
+@app.post("/auth/login",
+    response_model=dict,
+    summary="User Login",
+    description="Login with phone/email and password"
+)
+async def login(login_data: UserLoginRequest):
+    """
+    User login with phone/email and password
+    
+    - **phone**: Phone number OR
+    - **email**: Email address
+    - **password**: User password (required)
+    
+    Returns access token and user information
+    """
     
     # Extract credentials
-    identifier = login_data.get("phone") or login_data.get("email")
-    password = login_data.get("password")
+    identifier = login_data.phone or login_data.email
+    password = login_data.password
     
     if not identifier or not password:
         raise HTTPException(
@@ -538,15 +566,27 @@ async def login(login_data: dict):
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": user_response
+        "user": user_response,
+        "message": "Login successful"
     }
 
 
-@app.post("/auth/reset-password")
-async def reset_password(reset_data: dict):
-    """Password reset request"""
+@app.post("/auth/reset-password",
+    response_model=dict,
+    summary="Password Reset Request",
+    description="Request password reset via phone or email"
+)
+async def reset_password(reset_data: PasswordResetRequest):
+    """
+    Password reset request
     
-    identifier = reset_data.get("phone") or reset_data.get("email")
+    - **phone**: Phone number OR
+    - **email**: Email address
+    
+    Note: In production, this would send OTP via SMS or email
+    """
+    
+    identifier = reset_data.phone or reset_data.email
     
     if not identifier:
         raise HTTPException(
@@ -561,18 +601,11 @@ async def reset_password(reset_data: dict):
         ]
     })
     
-    if not user:
-        # Don't reveal if user exists
-        return {
-            "message": "If a user with this phone/email exists, reset instructions have been sent"
-        }
-    
-    # In production: Send OTP via SMS or email
-    # For now, just acknowledge
+    # Don't reveal if user exists (security)
     return {
-        "message": "If a user with this phone/email exists, reset instructions have been sent"
+        "message": "If a user with this phone/email exists, reset instructions have been sent",
+        "success": True
     }
-
 
 @app.get("/auth/me")
 async def get_current_user_info(current_user: dict = Depends(get_current_user)):
@@ -10276,7 +10309,11 @@ async def submit_chatbot_feedback(
 
 @app.get("/")
 async def root():
-    return {"message": "Organic Advisory System API", "version": "1.0.0", "status": "running"}
+    return {
+        "message": "✅ Organic Advisory System API is running successfully",
+        "version": "1.0.0",
+        "status": "healthy"
+    }
 
 @app.get("/health")
 async def health_check():

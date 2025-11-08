@@ -45,6 +45,69 @@ class User(BaseModel):
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
 
+class UserSignupRequest(BaseModel):
+    """User signup request model"""
+    name: str = Field(..., min_length=2, max_length=100, description="User's full name")
+    phone: str = Field(..., min_length=10, max_length=15, description="Phone number")
+    email: Optional[EmailStr] = Field(None, description="Email address (optional)")
+    password: str = Field(..., min_length=6, description="Password (minimum 6 characters)")
+    role: str = Field(default="farmer", description="User role: farmer or specialist")
+    language_preference: str = Field(default="telugu", description="Preferred language")
+    village: Optional[str] = Field(None, description="Village name")
+    district: str = Field(default="Visakhapatnam", description="District name")
+    state: str = Field(default="Andhra Pradesh", description="State name")
+    
+    # Specialist-specific fields (optional)
+    specialization: Optional[list] = Field(None, description="Specialist areas (for specialists only)")
+    experience_years: Optional[int] = Field(None, description="Years of experience (for specialists)")
+    qualification: Optional[str] = Field(None, description="Qualification (for specialists)")
+    languages: Optional[list] = Field(None, description="Languages spoken (for specialists)")
+    bio: Optional[str] = Field(None, description="Bio/description (for specialists)")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Ramesh Kumar",
+                "phone": "9876543210",
+                "email": "ramesh@example.com",
+                "password": "secure123",
+                "role": "farmer",
+                "language_preference": "telugu",
+                "village": "Anakapalle",
+                "district": "Visakhapatnam",
+                "state": "Andhra Pradesh"
+            }
+        }
+
+
+class UserLoginRequest(BaseModel):
+    """User login request model"""
+    phone: Optional[str] = Field(None, description="Phone number")
+    email: Optional[EmailStr] = Field(None, description="Email address")
+    password: str = Field(..., min_length=6, description="Password")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "phone": "9876543210",
+                "password": "secure123"
+            }
+        }
+
+
+class PasswordResetRequest(BaseModel):
+    """Password reset request model"""
+    phone: Optional[str] = Field(None, description="Phone number")
+    email: Optional[EmailStr] = Field(None, description="Email address")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "phone": "9876543210"
+            }
+        }
+
+    
 
 class UserProgress(BaseModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
