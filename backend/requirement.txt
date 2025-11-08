@@ -1,46 +1,28 @@
-# Core Framework
-fastapi==0.115.0
-uvicorn[standard]==0.30.0
-pydantic==2.9.0
-pydantic-settings==2.5.0
-python-multipart==0.0.9
-
-# Database
-motor==3.5.0
-pymongo==4.8.0
-
-# Authentication & Security
-passlib[bcrypt]==1.7.4
-python-jose[cryptography]==3.3.0
-bcrypt==4.1.3
-
-# Cloud Storage
-cloudinary==1.40.0
-
-tensorflow-intel==2.17.0
-
-
-
-google-generativeai==0.7.0
-scikit-learn==1.5.0
-numpy==1.26.4
-Pillow==10.3.0
-h5py==3.11.0
-
-requests==2.32.0
-httpx==0.27.0
-
-stripe==10.0.0
-
-websockets==12.0
-
-python-dotenv==1.0.1
-
-
-pandas==2.2.2
-
-# Image Processing - Headless version (no GUI dependencies)
-opencv-python-headless==4.10.0.84
-
-# ML Model Support
-joblib==1.4.2
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+python-multipart
+motor
+pymongo
+passlib
+bcrypt
+python-jose
+cryptography
+cloudinary
+tensorflow
+keras
+google-generativeai
+scikit-learn
+numpy
+scipy
+h5py
+Pillow
+opencv-python-headless
+requests
+httpx
+stripe
+websockets
+python-dotenv
+joblib
+pandas
