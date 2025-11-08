@@ -78,70 +78,103 @@ import h5py
 import json
 import tempfile
 import shutil
+import os
 
-def fix_model_config(model_path):
-    """Fix BatchNormalization axis issue in saved model"""
+def fix_and_load_model(model_path):
+    """
+    Fix BatchNormalization axis issue and load model properly
+    """
+    print(f"Attempting to load model from: {model_path}")
     
-    # Create a temporary copy
-    temp_path = model_path + '.tmp'
-    shutil.copy2(model_path, temp_path)
+    # First, try loading directly
+    try:
+        model = tf.keras.models.load_model(model_path, compile=False)
+        print("✅ Model loaded successfully without fixes")
+        return model
+    except (TypeError, ValueError) as e:
+        error_msg = str(e)
+        if "axis" in error_msg or "BatchNormalization" in error_msg:
+            print("⚠️ Detected BatchNormalization axis issue, applying fix...")
+        else:
+            print(f"❌ Different error: {error_msg}")
+            raise
     
-    with h5py.File(temp_path, 'r+') as f:
-        # Check if model config exists
-        if 'model_config' in f.attrs:
-            # Load config
-            config_str = f.attrs['model_config']
-            if isinstance(config_str, bytes):
-                config_str = config_str.decode('utf-8')
-            
-            config = json.loads(config_str)
-            
-            # Fix BatchNormalization layers
-            def fix_layer_config(layer_config):
-                if layer_config.get('class_name') == 'BatchNormalization':
-                    if 'config' in layer_config:
-                        axis = layer_config['config'].get('axis')
-                        # Convert list to single integer
-                        if isinstance(axis, list) and len(axis) == 1:
-                            layer_config['config']['axis'] = axis[0]
-                            print(f"Fixed BatchNormalization axis: {axis} -> {axis[0]}")
+    # Create a proper temporary file with .h5 extension
+    import tempfile
+    temp_fd, temp_path = tempfile.mkstemp(suffix='.h5', prefix='model_fixed_')
+    os.close(temp_fd)  # Close file descriptor
+    
+    try:
+        # Copy original file to temp location
+        shutil.copy2(model_path, temp_path)
+        print(f"Created temporary model at: {temp_path}")
+        
+        # Fix the config
+        with h5py.File(temp_path, 'r+') as f:
+            if 'model_config' in f.attrs:
+                # Load config
+                config_str = f.attrs['model_config']
+                if isinstance(config_str, bytes):
+                    config_str = config_str.decode('utf-8')
                 
-                # Recursively fix nested configs
-                if 'config' in layer_config:
-                    if 'layers' in layer_config['config']:
-                        for layer in layer_config['config']['layers']:
-                            fix_layer_config(layer)
+                config = json.loads(config_str)
                 
-                return layer_config
-            
-            # Fix all layers
-            if 'config' in config:
-                if 'layers' in config['config']:
-                    for layer in config['config']['layers']:
-                        fix_layer_config(layer)
-            
-            # Save fixed config
-            fixed_config_str = json.dumps(config)
-            f.attrs.modify('model_config', fixed_config_str.encode('utf-8'))
-    
-    return temp_path
-
-try:
-    # Try loading directly first
-    disease_model = tf.keras.models.load_model(settings.MODEL_PATH, compile=False)
-    print("✅ Model loaded successfully")
-except TypeError as e:
-    if "axis" in str(e):
-        print("⚠️ Detected axis format issue, fixing...")
-        fixed_model_path = fix_model_config(settings.MODEL_PATH)
-        disease_model = tf.keras.models.load_model(fixed_model_path, compile=False)
-        print("✅ Model loaded with fix")
-    else:
+                # Recursive function to fix BatchNormalization layers
+                def fix_bn_axis(obj):
+                    """Recursively fix axis in all BatchNormalization layers"""
+                    if isinstance(obj, dict):
+                        # Fix axis if this is a BatchNormalization layer
+                        if obj.get('class_name') == 'BatchNormalization':
+                            if 'config' in obj and 'axis' in obj['config']:
+                                axis = obj['config']['axis']
+                                if isinstance(axis, list):
+                                    if len(axis) == 1:
+                                        obj['config']['axis'] = axis[0]
+                                        print(f"Fixed BatchNormalization axis: {axis} -> {axis[0]}")
+                                    elif len(axis) > 1:
+                                        obj['config']['axis'] = tuple(axis)
+                                        print(f"Fixed BatchNormalization axis: {axis} -> {tuple(axis)}")
+                        
+                        # Recursively process all nested dictionaries
+                        for key, value in obj.items():
+                            if isinstance(value, (dict, list)):
+                                fix_bn_axis(value)
+                    
+                    elif isinstance(obj, list):
+                        # Recursively process all items in lists
+                        for item in obj:
+                            if isinstance(item, (dict, list)):
+                                fix_bn_axis(item)
+                
+                # Apply fix to entire config
+                fix_bn_axis(config)
+                
+                # Save fixed config back
+                fixed_config_str = json.dumps(config)
+                f.attrs.modify('model_config', fixed_config_str.encode('utf-8'))
+                print("✅ Model config fixed successfully")
+        
+        # Now load the fixed model
+        print("Loading fixed model...")
+        model = tf.keras.models.load_model(temp_path, compile=False)
+        print("✅ Model loaded successfully after fix")
+        
+        return model
+        
+    except Exception as e:
+        print(f"❌ Error during model fix: {e}")
         raise
+    finally:
+        # Clean up temporary file
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                print(f"Cleaned up temporary file: {temp_path}")
+        except Exception as e:
+            print(f"Warning: Could not delete temp file: {e}")
 
-# Load class names
-with open(settings.CLASS_NAMES_PATH, 'r') as f:
-    class_names = [line.strip() for line in f.readlines()]
+
+# Load the model using the fixed loader
 
 
 security = HTTPBearer()
