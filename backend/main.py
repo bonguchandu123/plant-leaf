@@ -60,6 +60,8 @@ app.add_middleware(
 client = AsyncIOMotorClient(settings.MONGODB_URL)
 db = client[settings.DATABASE_NAME]
 
+
+
 # Cloudinary Configuration
 cloudinary.config(
     cloud_name=settings.CLOUDINARY_CLOUD_NAME,
@@ -174,6 +176,39 @@ def fix_and_load_model(model_path):
             print(f"Warning: Could not delete temp file: {e}")
 
 
+
+# After this line:
+# db = client[settings.DATABASE_NAME]
+
+# ============= LOAD DISEASE DETECTION MODEL =============
+print("Loading disease detection model...")
+
+try:
+    # Path to your model file
+    MODEL_PATH = settings.MODEL_PATH 
+    
+    # Load the model
+    disease_model = fix_and_load_model(MODEL_PATH)
+    
+    # Define class names (update these based on your actual model classes)
+    class_names = [
+        "Healthy",
+        "Bacterial Blight",
+        "Leaf Spot",
+        "Brown Spot",
+        "Blast",
+        "Tungro",
+        "Bacterial Leaf Blight",
+        "Sheath Blight",
+        # Add all your disease classes here
+    ]
+    
+    print(f"✅ Disease model loaded successfully. Classes: {len(class_names)}")
+    
+except Exception as e:
+    print(f"❌ Error loading disease model: {e}")
+    disease_model = None
+    class_names = []
 # Load the model using the fixed loader
 
 
@@ -269,19 +304,48 @@ def require_role(required_role: str):
     return role_checker
 
 # ============= AI Utilities =============
+# async def predict_disease(image_file: UploadFile):
+#     contents = await image_file.read()
+#     image = Image.open(io.BytesIO(contents))
+#     image = image.resize((224, 224))
+#     image_array = np.array(image) / 255.0
+#     image_array = np.expand_dims(image_array, axis=0)
+    
+#     predictions = disease_model.predict(image_array)
+#     predicted_class = class_names[np.argmax(predictions[0])]
+#     confidence = float(np.max(predictions[0]))
+    
+#     return predicted_class, confidence
 async def predict_disease(image_file: UploadFile):
-    contents = await image_file.read()
-    image = Image.open(io.BytesIO(contents))
-    image = image.resize((224, 224))
-    image_array = np.array(image) / 255.0
-    image_array = np.expand_dims(image_array, axis=0)
-    
-    predictions = disease_model.predict(image_array)
-    predicted_class = class_names[np.argmax(predictions[0])]
-    confidence = float(np.max(predictions[0]))
-    
-    return predicted_class, confidence
-
+    """Predict disease from uploaded image - Fixed for RGBA images"""
+    try:
+        contents = await image_file.read()
+        image = Image.open(io.BytesIO(contents))
+        
+        # ✅ FIX: Convert RGBA to RGB (remove alpha channel)
+        if image.mode != 'RGB':
+            # Convert to RGB (this handles RGBA, P, L, etc.)
+            image = image.convert('RGB')
+        
+        # Resize to model input size
+        image = image.resize((224, 224))
+        
+        # Convert to numpy array and normalize
+        image_array = np.array(image) / 255.0
+        
+        # Add batch dimension
+        image_array = np.expand_dims(image_array, axis=0)
+        
+        # Predict
+        predictions = disease_model.predict(image_array)
+        predicted_class = class_names[np.argmax(predictions[0])]
+        confidence = float(np.max(predictions[0]))
+        
+        return predicted_class, confidence
+        
+    except Exception as e:
+        print(f"Error in predict_disease: {e}")
+        raise Exception(f"Failed to analyze image: {str(e)}")
 async def generate_organic_solution(disease_name: str, crop_name: str):
     prompt = f"""
     Generate a detailed organic treatment solution for {disease_name} affecting {crop_name}.
@@ -823,6 +887,21 @@ async def upload_crop_photo(
         error_msg = "ఫైల్ పరిమాణం చాలా పెద్దది. గరిష్ట పరిమాణం 10MB" if user_language == "telugu" else "File size too large. Maximum size is 10MB"
         raise HTTPException(status_code=400, detail=error_msg)
     
+    # ✅ ADDITIONAL FIX: Pre-process image before prediction
+    try:
+        # Open and convert image to RGB
+        image = Image.open(io.BytesIO(contents))
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+            # Re-encode to bytes for later use
+            img_byte_arr = io.BytesIO()
+            image.save(img_byte_arr, format='JPEG')
+            contents = img_byte_arr.getvalue()
+    except Exception as e:
+        print(f"Error preprocessing image: {e}")
+        error_msg = "చిత్రాన్ని ప్రాసెస్ చేయడంలో లోపం" if user_language == "telugu" else "Error processing image"
+        raise HTTPException(status_code=400, detail=error_msg)
+    
     # Reset file pointer for disease prediction
     await file.seek(0)
     
@@ -835,7 +914,6 @@ async def upload_crop_photo(
         print(f"Error predicting disease: {e}")
         error_msg = "చిత్రాన్ని విశ్లేషించడంలో విఫలమైంది. దయచేసి మళ్ళీ ప్రయత్నించండి." if user_language == "telugu" else "Failed to analyze image. Please try again."
         raise HTTPException(status_code=500, detail=error_msg)
-    
     # Upload to Cloudinary
     try:
         extension_map = {
